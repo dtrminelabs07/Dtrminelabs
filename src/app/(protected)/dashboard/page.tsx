@@ -46,7 +46,7 @@ export default function Dashboard() {
   }
   function chooseDate(value: string) { setDate(value); if (value) setMonth(new Date(`${value}T12:00:00`)); }
 
-  return <main className="page">
+  return <main className={busy ? "page is-loading" : "page"}>
     <div className="page-title-row"><div><h1 className="page-title">Upload Tracker</h1><p className="page-subtitle">Kelola dan pantau progres upload harian semua akun.</p><p className="page-subtitle" style={{ marginTop: 8 }}>Tanggal laporan: <input type="date" className="field" value={date} onChange={event => chooseDate(event.target.value)} /></p></div><Link className="btn btn-primary" href="/calendar"><CalendarDays size={15} />Buka kalender</Link></div>
     <div className="stats-grid">{(["COMPLETED", "PENDING", "UPLOADED", "LIMIT", "OUT_OF_STOCK", "HOLIDAY"] as Status[]).map(status => <article className="stat-card" key={status} style={{ "--tone": tones[status] } as React.CSSProperties}><div className="stat-label"><span className="stat-dot" />{labels[status]}</div><div className="stat-value">{busy ? "—" : status === "PENDING" ? pending : count(status)}</div><div className="stat-foot">{accounts.length ? Math.round((status === "PENDING" ? pending : count(status)) / accounts.length * 100) : 0}% dari akun</div></article>)}<article className="stat-card" style={{ "--tone": "#1685ff" } as React.CSSProperties}><div className="stat-label"><span className="stat-dot" />Total akun</div><div className="stat-value">{busy ? "—" : accounts.length}</div><div className="stat-foot">akun aktif</div></article></div>
     <div className="dashboard-grid"><section>

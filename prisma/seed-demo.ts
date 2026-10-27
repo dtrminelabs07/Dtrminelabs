@@ -17,21 +17,24 @@ if (process.env.DEMO_LOGIN_ENABLED !== "true") {
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required to create the demo account.");
-const email = process.env.DEMO_ADMIN_EMAIL?.toLowerCase();
-const password = process.env.DEMO_ADMIN_PASSWORD;
-if (email !== "admin@dtrminelabs.com" || !password || password.length < 12) {
-  throw new Error("Set DEMO_ADMIN_EMAIL to the documented demo email and DEMO_ADMIN_PASSWORD to a 12+ character secret before seeding.");
-}
+const demoCredentials = (() => {
+  const email = process.env.DEMO_ADMIN_EMAIL?.toLowerCase();
+  const password = process.env.DEMO_ADMIN_PASSWORD;
+  if (email !== "admin@dtrminelabs.com" || !password || password.length < 12) {
+    throw new Error("Set DEMO_ADMIN_EMAIL to the documented demo email and DEMO_ADMIN_PASSWORD to a 12+ character secret before seeding.");
+  }
+  return { email, password };
+})();
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 1 }) });
 async function main() {
-  const passwordHash = await bcrypt.hash(password, 12);
+  const passwordHash = await bcrypt.hash(demoCredentials.password, 12);
   await prisma.user.upsert({
-    where: { email },
+    where: { email: demoCredentials.email },
     update: { name: "Dtrminelabs Demo Admin", passwordHash, role: UserRole.ADMIN },
-    create: { name: "Dtrminelabs Demo Admin", email, passwordHash, role: UserRole.ADMIN }
+    create: { name: "Dtrminelabs Demo Admin", email: demoCredentials.email, passwordHash, role: UserRole.ADMIN }
   });
-  console.log(`Demo admin ready for ${environment}: ${email}`);
+  console.log(`Demo admin ready for ${environment}: ${demoCredentials.email}`);
 }
 
 main().catch(error => {
