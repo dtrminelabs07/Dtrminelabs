@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Check, Eye, EyeOff, Grid2X2, LockKeyhole, ShieldCheck } from "lucide-react";
 
@@ -18,19 +18,42 @@ export default function LoginForm({ demo }: { demo: DemoCredentials }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const requestController = useRef<AbortController | null>(null);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+      requestController.current?.abort();
+    };
+  }, []);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!event.currentTarget.reportValidity()) return;
     setError(""); setBusy(true);
+    const controller = new AbortController();
+    requestController.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
     try {
-      const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim(), password }) });
+      const response = await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim(), password }), signal: controller.signal });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Email atau kata sandi tidak cocok.");
       router.replace("/dashboard"); router.refresh();
     } catch (cause) {
-      setError(cause instanceof TypeError ? "Tidak dapat terhubung ke server. Pastikan aplikasi berjalan lalu coba lagi." : cause instanceof Error ? cause.message : "Tidak dapat menghubungi server. Periksa koneksi aplikasi lalu coba lagi.");
-    } finally { setBusy(false); }
+      if (isMounted.current) {
+        setError(controller.signal.aborted
+          ? "Permintaan login terlalu lama atau dibatalkan. Periksa koneksi lalu coba lagi."
+          : cause instanceof TypeError
+            ? "Tidak dapat terhubung ke server. Pastikan aplikasi berjalan lalu coba lagi."
+            : cause instanceof Error ? cause.message : "Tidak dapat menghubungi server. Periksa koneksi aplikasi lalu coba lagi.");
+      }
+    } finally {
+      window.clearTimeout(timeout);
+      if (requestController.current === controller) requestController.current = null;
+      if (isMounted.current) setBusy(false);
+    }
   }
 
   return <main className="login-layout">
