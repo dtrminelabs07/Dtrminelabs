@@ -1,0 +1,93 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+enum UploadStatus {
+  COMPLETED
+  PENDING
+  UPLOADED
+  LIMIT
+  OUT_OF_STOCK
+  HOLIDAY
+}
+enum ActivityAction {
+  CREATED
+  UPDATED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         UserRole      @default(STAFF)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  createdUploads DailyUpload[] @relation("CreatedUploads")
+  updatedUploads DailyUpload[] @relation("UpdatedUploads")
+  activities   ActivityLog[]
+}
+
+model Account {
+  id        String        @id @default(cuid())
+  name      String
+  username  String?
+  avatarUrl String?
+  platform  String?
+  core      String
+  subCore   String?
+  notes     String?
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  uploads   DailyUpload[]
+  activities ActivityLog[]
+  @@index([isActive, core, subCore])
+  @@index([name])
+}
+
+model DailyUpload {
+  id          String        @id @default(cuid())
+  accountId   String
+  date        DateTime      @db.Date
+  status      UploadStatus
+  notes       String?
+  createdById String
+  updatedById String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  account     Account       @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  createdBy   User          @relation("CreatedUploads", fields: [createdById], references: [id])
+  updatedBy   User          @relation("UpdatedUploads", fields: [updatedById], references: [id])
+  activities  ActivityLog[]
+  @@unique([accountId, date])
+  @@index([date, status])
+  @@index([accountId, date])
+}
+
+model ActivityLog {
+  id            String          @id @default(cuid())
+  accountId     String
+  dailyUploadId String?
+  actorId       String
+  action        ActivityAction
+  previousStatus UploadStatus?
+  newStatus     UploadStatus?
+  description   String
+  createdAt     DateTime        @default(now())
+  account       Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  dailyUpload   DailyUpload?    @relation(fields: [dailyUploadId], references: [id], onDelete: SetNull)
+  actor         User            @relation(fields: [actorId], references: [id])
+  @@index([createdAt])
+  @@index([accountId, createdAt])
+}
