@@ -13,9 +13,12 @@ function styledHeader(row: ExcelJS.Row) { row.height = 25; row.eachCell(cell => 
 
 export async function GET(request: NextRequest) {
   const { response, user } = await requireUser(); if (response) return response;
-  const params = request.nextUrl.searchParams; const mode = params.get("mode") ?? (params.get("month") ? "month" : "month");
+  const params = request.nextUrl.searchParams; const date = params.get("date"); const mode = params.get("mode") ?? "month";
   let start: Date; let end: Date; let periodName: string;
-  if (mode === "month") {
+  if (date) {
+    if (!validDay(date)) return NextResponse.json({ error: "Tanggal tidak valid." }, { status: 400 });
+    start = new Date(`${date}T00:00:00.000Z`); end = new Date(start.getTime() + 86_400_000); periodName = date;
+  } else if (mode === "month") {
     const month = params.get("month"); if (!month || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return NextResponse.json({ error: "Bulan tidak valid." }, { status: 400 });
     const [y, m] = month.split("-").map(Number); start = new Date(Date.UTC(y, m - 1, 1)); end = new Date(Date.UTC(y, m, 1)); periodName = month;
   } else if (mode === "year") {
@@ -30,7 +33,7 @@ export async function GET(request: NextRequest) {
   const account = { ...scope, ...(accountId ? { id: accountId } : {}), ...(core ? { core } : {}), ...(subCore ? { subCore } : {}), ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { username: { contains: q, mode: "insensitive" as const } }, { core: { contains: q, mode: "insensitive" as const } }, { subCore: { contains: q, mode: "insensitive" as const } }, { notes: { contains: q, mode: "insensitive" as const } }] } : {}) };
   const where = { date: { gte: start, lt: end }, account, ...(parsed.success ? { status: parsed.data } : {}) };
   const total = await db.dailyUpload.count({ where }); if (total > 100_000) return NextResponse.json({ error: "Ekspor dibatasi 100.000 baris. Persempit rentang atau gunakan filter." }, { status: 413 });
-  const rows = await db.dailyUpload.findMany({ where, orderBy: [{ date: "asc" }, { account: { name: "asc" } }], include: { account: { select: { name: true, username: true, core: true, subCore: true, platform: true } }, updatedBy: { select: { name: true } } } });
+  const rows = await db.dailyUpload.findMany({ where, orderBy: [{ date: "asc" }, { account: { name: "asc" } }], include: { account: { select: { id: true, name: true, username: true, core: true, subCore: true, platform: true } }, updatedBy: { select: { name: true } } } });
   if (params.get("format") !== "xlsx") {
     const quote = (value: string | null | undefined) => `"${(value ?? "").replaceAll('"', '""')}"`;
     const csv = ["date,account,username,core,sub_core,status,notes", ...rows.map(row => [row.date.toISOString().slice(0, 10), row.account.name, row.account.username, row.account.core, row.account.subCore, row.status, row.notes].map(quote).join(","))].join("\r\n");
@@ -39,7 +42,10 @@ export async function GET(request: NextRequest) {
   const workbook = new ExcelJS.Workbook(); workbook.creator = "Dtrminelabs Upload Tracker"; workbook.subject = "Laporan tracker upload"; workbook.title = `Laporan ${periodName}`; workbook.created = new Date(); workbook.modified = new Date();
   const summary = workbook.addWorksheet("Ringkasan", { views: [{ state: "frozen", ySplit: 4 }] }); summary.columns = [{ width: 32 }, { width: 24 }, { width: 24 }];
   summary.mergeCells("A1:C1"); summary.getCell("A1").value = "DTRMINELABS · UPLOAD TRACKER"; summary.getCell("A1").font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } }; summary.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF08182B" } }; summary.getRow(1).height = 34;
-  summary.addRow(["Laporan", periodName]); summary.addRow(["Rentang tanggal", `${start.toISOString().slice(0, 10)} s.d. ${new Date(end.getTime() - 86_400_000).toISOString().slice(0, 10)}`]); summary.addRow(["Filter", [accountId ? "Akun" : "Semua akun", parsed.success ? labels[parsed.data] : "Semua status", core ?? "Semua core", subCore ?? "Semua sub-core", q ? `Pencarian: ${q}` : ""].filter(Boolean).join(" · ")]);
+  summary.addRow(["Laporan", periodName]); summary.addRow(["Rentang tanggal", `${start.toISOString().slice(0, 10)} s.d. ${new Date(end.getTime() - 86_400_000).toISOString().slice(0, 10)}`]);
+  summary.addRow(["Waktu ekspor", new Date().toLocaleString("id-ID")]);
+  summary.addRow(["Akun tercakup", new Set(rows.map(row => row.account.id)).size]);
+  summary.addRow(["Filter", [accountId ? "Akun" : "Semua akun", parsed.success ? labels[parsed.data] : "Semua status", core ?? "Semua core", subCore ?? "Semua sub-core", q ? `Pencarian: ${q}` : ""].filter(Boolean).join(" · ")]);
   summary.addRow([]); const header = summary.addRow(["Status", "Jumlah", "Persentase"]); styledHeader(header);
   const counts = Object.fromEntries(statuses.map(s => [s, 0])) as Record<typeof statuses[number], number>; for (const row of rows) counts[row.status]++;
   for (const s of statuses) { const r = summary.addRow([labels[s], counts[s], total ? counts[s] / total : 0]); r.getCell(2).numFmt = "#,##0"; r.getCell(3).numFmt = "0.0%"; r.getCell(1).font = { color: { argb: `FF${colors[s]}` }, bold: true }; }
@@ -51,7 +57,7 @@ export async function GET(request: NextRequest) {
   const byDate = new Map<string, Record<string, number>>(); for (const row of rows) { const key = row.date.toISOString().slice(0, 10); const record = byDate.get(key) ?? Object.fromEntries([...statuses, "total"].map(s => [s, 0])); record[row.status]++; record.total++; byDate.set(key, record); }
   for (const [date, record] of byDate) { const r = daily.addRow({ date: new Date(`${date}T00:00:00Z`), ...record }); r.getCell(1).numFmt = "dd mmm yyyy"; for (let i = 2; i <= r.cellCount; i++) r.getCell(i).numFmt = "#,##0"; }
   daily.autoFilter = { from: "A1", to: `${String.fromCharCode(64 + daily.columnCount)}1` };
-  for (const sheet of [summary, details, daily]) { sheet.eachRow(row => row.eachCell(cell => { cell.alignment = { ...cell.alignment, vertical: "middle", wrapText: true }; })); sheet.views = [{ state: "frozen", ySplit: sheet === summary ? 5 : 1 }]; }
+  for (const sheet of [summary, details, daily]) { sheet.eachRow(row => row.eachCell(cell => { cell.alignment = { ...cell.alignment, vertical: "middle", wrapText: true }; })); sheet.views = [{ state: "frozen", ySplit: sheet === summary ? 8 : 1 }]; }
   const buffer = await workbook.xlsx.writeBuffer();
   return new NextResponse(new Uint8Array(buffer), { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Content-Disposition": `attachment; filename="dtrminelabs-laporan-${periodName}.xlsx"`, "Cache-Control": "no-store" } });
 }

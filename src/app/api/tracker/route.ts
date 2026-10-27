@@ -4,15 +4,18 @@ import { accountOwnerScope, requireUser } from "@/lib/auth";
 import { trackerSchema } from "@/lib/validators";
 import { ActivityAction } from "@/generated/prisma/enums";
 function validMonth(value: string | null) { return !!value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value); }
+function validDay(value: string | null) { if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false; const date = new Date(`${value}T00:00:00.000Z`); return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value; }
 export async function GET(request: NextRequest) {
   const { response, user } = await requireUser(); if (response) return response;
-  const month = request.nextUrl.searchParams.get("month");
-  if (!validMonth(month)) return NextResponse.json({ error: "Bulan tidak valid." }, { status: 400 });
-  const [year, m] = month!.split("-").map(Number);
-  const start = new Date(Date.UTC(year, m - 1, 1)); const end = new Date(Date.UTC(year, m, 1));
+  const params = request.nextUrl.searchParams; const selectedDate = params.get("date"); const month = params.get("month");
+  if (selectedDate) {
+    if (!validDay(selectedDate)) return NextResponse.json({ error: "Tanggal tidak valid." }, { status: 400 });
+  } else if (!validMonth(month)) return NextResponse.json({ error: "Bulan tidak valid." }, { status: 400 });
+  const start = selectedDate ? new Date(`${selectedDate}T00:00:00.000Z`) : (() => { const [year, m] = month!.split("-").map(Number); return new Date(Date.UTC(year, m - 1, 1)); })();
+  const end = selectedDate ? new Date(start.getTime() + 86_400_000) : (() => { const [year, m] = month!.split("-").map(Number); return new Date(Date.UTC(year, m, 1)); })();
   const [accounts, uploads] = await Promise.all([
     db.account.findMany({ where: { ...accountOwnerScope(user!), isActive: true }, orderBy: [{ core: "asc" }, { name: "asc" }] }),
-    db.dailyUpload.findMany({ where: { date: { gte: start, lt: end }, account: accountOwnerScope(user!) }, select: { id: true, accountId: true, date: true, status: true, notes: true, updatedAt: true } })
+    db.dailyUpload.findMany({ where: { date: { gte: start, lt: end }, account: { ...accountOwnerScope(user!), isActive: true } }, select: { id: true, accountId: true, date: true, status: true, notes: true, updatedAt: true } })
   ]);
   return NextResponse.json({ accounts, uploads });
 }

@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Check, Clipboard, Eye, EyeOff, Grid2X2, LockKeyhole, ShieldCheck } from "lucide-react";
+import ThemeToggle from "@/components/theme-toggle";
 
 type DemoCredentials = { email: string; password: string } | null;
 const sampleRows = [
@@ -73,15 +74,15 @@ export default function LoginForm({ demo }: { demo: DemoCredentials }) {
       <div className="login-brand"><span className="login-brand-mark"><span>D</span><i/><i/><i/><i/></span><span className="login-brand-copy"><strong>DTRMINELABS</strong><small>UPLOAD TRACKER</small></span></div>
       <div className="story-copy"><span className="eyebrow"><span/> DAILY OPERATIONS, IN FOCUS</span><h1>Semua akun.<br/><em>Satu kendali.</em></h1><p>Pantau aktivitas upload harian, kelola status, dan temukan progres setiap akun dalam satu workspace.</p></div>
       <div className="tracker-preview" aria-label="Pratinjau matriks status upload">
-        <div className="preview-topline"><div className="preview-title"><Grid2X2 size={15}/><span>Activity overview</span></div><span className="preview-period">OCT <b>2026</b><ArrowUpRight size={13}/></span></div>
+        <div className="preview-topline"><div className="preview-title"><Grid2X2 size={15}/><span>Pratinjau tracker</span></div><span className="preview-period">DEMO <b>VIEW</b><ArrowUpRight size={13}/></span></div>
         <div className="preview-head"><span>ACCOUNT</span><span>MON</span><span>TUE</span><span>WED</span><span>THU</span></div>
         {sampleRows.map((row,index)=><div className="preview-row" key={row.name} style={{"--row":index} as React.CSSProperties}><span className="preview-account"><i>{row.day}</i>{row.name}</span>{row.cells.map((cell,cellIndex)=><span className={`preview-cell preview-${cell}`} key={`${row.day}-${cellIndex}`} aria-label={cell}><span>{cell==="done"?<Check size={12}/>:cell==="upload"?"UP":cell==="pending"?"—":cell==="limit"?"L":"OFF"}</span></span>)}</div>)}
-        <div className="preview-footer"><span><i className="preview-key key-done"/>Selesai</span><span><i className="preview-key key-upload"/>Sudah upload</span><span><i className="preview-key key-pending"/>Belum</span><div className="preview-progress"><span>PROGRESS</span><b>78%</b><i><u/></i></div></div>
+        <div className="preview-footer"><span><i className="preview-key key-done"/>Selesai</span><span><i className="preview-key key-upload"/>Sudah upload</span><span><i className="preview-key key-pending"/>Belum</span><div className="preview-progress"><span>STATUS</span><b>LIVE</b><i><u/></i></div></div>
       </div>
       <div className="story-foot"><span>BUILT FOR CLARITY</span><span>01 — 06</span></div>
     </section>
 
-    <section className="login-panel"><div className="mobile-login-brand"><span className="login-brand-mark"><span>D</span><i/><i/><i/><i/></span><span className="login-brand-copy"><strong>DTRMINELABS</strong><small>UPLOAD TRACKER</small></span></div>
+    <section className="login-panel"><div className="login-panel-toolbar"><span>SECURE WORKSPACE</span><ThemeToggle /></div><div className="mobile-login-brand"><span className="login-brand-mark"><span>D</span><i/><i/><i/><i/></span><span className="login-brand-copy"><strong>DTRMINELABS</strong><small>UPLOAD TRACKER</small></span></div>
       <div className="login-card"><div className="form-overline"><span className="overline-rule"/> WORKSPACE ACCESS</div><h2>Selamat datang kembali</h2><p className="login-intro">Masuk untuk melanjutkan ke workspace upload tracker.</p>
         <form onSubmit={submit} className="login-fields" noValidate>
           <label className="login-label" htmlFor="login-email">Email</label><div className="login-input-wrap"><input id="login-email" type="email" autoComplete="username" inputMode="email" required maxLength={254} value={email} onChange={event=>setEmail(event.target.value)} placeholder="nama@perusahaan.com" aria-describedby={error?"login-error":undefined}/></div>

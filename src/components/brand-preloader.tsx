@@ -1,28 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
 
-const sessionKey = "dtrminelabs-preloaded";
-
 export default function BrandPreloader() {
-  const [phase, setPhase] = useState<"enter" | "exit" | null>(null);
+  const [phase, setPhase] = useState<"enter" | "exit" | null>("enter");
 
   useEffect(() => {
-    try {
-      if (sessionStorage.getItem(sessionKey)) return;
-    } catch {
-      // Storage can be unavailable in private browsing; the timed loader still works.
-    }
-
-    setPhase("enter");
-    const exitTimer = window.setTimeout(() => setPhase("exit"), 280);
+    const exitTimer = window.setTimeout(() => setPhase("exit"), 360);
     const finishTimer = window.setTimeout(() => {
       setPhase(null);
-      try {
-        sessionStorage.setItem(sessionKey, "1");
-      } catch {
-        // Keep the page usable even when session storage is blocked.
-      }
-    }, 430);
+    }, 520);
 
     return () => {
       window.clearTimeout(exitTimer);
