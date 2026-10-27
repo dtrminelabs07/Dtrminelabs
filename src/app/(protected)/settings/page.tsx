@@ -1,8 +1,10 @@
 "use client";
 /* eslint-disable @next/next/no-location-assign-relative-destination -- This navigates to the CSV download endpoint. */
 import { useEffect, useState } from "react";
-import { Download, FileUp, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, DatabaseBackup, Download, FileUp, LockKeyhole, Palette, SlidersHorizontal } from "lucide-react";
 import { parseCsv } from "@/lib/csv";
+import ThemeToggle from "@/components/theme-toggle";
 
 type Preview = { total: number; valid: number; errors: { row: number; message: string }[]; duplicates: { row: number; message: string }[]; conflicts: { row: number; message: string }[]; canImport: boolean };
 type AccountOption = { id: string; name: string };
@@ -16,6 +18,7 @@ export default function SettingsPage() {
   const [accountId, setAccountId] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showBackup, setShowBackup] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
 
@@ -78,9 +81,15 @@ export default function SettingsPage() {
   }
 
   const issues = preview ? [...preview.errors, ...preview.duplicates, ...preview.conflicts] : [];
-  return <main className="page">
-    <div className="page-title-row"><div><h1 className="page-title">Pengaturan & impor</h1><p className="page-subtitle">Impor CSV dengan pratinjau, atau ekspor tracker sesuai filter.</p></div></div>
-    <div className="dashboard-grid">
+  return <main className="page settings-reference-page">
+    <div className="page-title-row"><div><h1 className="page-title">Pengaturan</h1><p className="page-subtitle">Atur preferensi dan data workspace.</p></div></div>
+    <section className="settings-list panel" aria-label="Pilihan pengaturan">
+      <div className="settings-row"><span className="settings-row-icon tone-blue"><Palette size={16} /></span><span className="settings-row-copy"><strong>Tampilan</strong><small>Atur tema dan preferensi tampilan.</small></span><ThemeToggle /></div>
+      <Link href="/users" className="settings-row"><span className="settings-row-icon tone-cyan"><LockKeyhole size={16} /></span><span className="settings-row-copy"><strong>Keamanan</strong><small>Kelola akses dan peran pengguna workspace.</small></span><ChevronRight size={17} className="settings-row-arrow" /></Link>
+      <button type="button" className="settings-row" onClick={() => setShowBackup(value => !value)} aria-expanded={showBackup} aria-controls="settings-backup"><span className="settings-row-icon tone-green"><DatabaseBackup size={16} /></span><span className="settings-row-copy"><strong>Backup Data</strong><small>Impor data CSV atau ekspor tracker.</small></span><ChevronRight size={17} className={`settings-row-arrow${showBackup ? " open" : ""}`} /></button>
+      <Link href="/reports" className="settings-row"><span className="settings-row-icon tone-purple"><SlidersHorizontal size={16} /></span><span className="settings-row-copy"><strong>Lainnya</strong><small>Lihat analitik dan laporan workspace.</small></span><ChevronRight size={17} className="settings-row-arrow" /></Link>
+    </section>
+    {showBackup && <div id="settings-backup" className="dashboard-grid settings-backup-grid">
       <section className="panel">
         <div className="panel-head"><div><div className="panel-title">Impor data CSV</div><div className="panel-sub">Validasi dan pratinjau sebelum data ditambahkan</div></div><FileUp size={17} color="#62adff" /></div>
         <div style={{ padding: 18 }}>
@@ -101,7 +110,6 @@ export default function SettingsPage() {
           <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={exportCsv} disabled={!month}><Download size={14} />Unduh CSV</button>
         </div>
       </section>
-    </div>
-    <section className="panel" style={{ marginTop: 15 }}><div className="panel-head"><div><div className="panel-title">Keamanan workspace</div><div className="panel-sub">Autentikasi dan hak akses</div></div><ShieldCheck size={17} color="#10d6a0" /></div><div style={{ padding: 18 }} className="notice">Akun dibuat admin dan tidak ada pendaftaran publik. Perubahan data serta riwayat aktivitas divalidasi di server. Untuk mengundang staf, gunakan halaman Pengguna.</div></section>
+    </div>}
   </main>;
 }
