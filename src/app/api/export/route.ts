@@ -10,6 +10,7 @@ const labels: Record<typeof statuses[number], string> = { COMPLETED: "Selesai", 
 const colors: Record<typeof statuses[number], string> = { COMPLETED: "10D6A0", PENDING: "FFC83D", UPLOADED: "20B8FF", LIMIT: "C477FF", OUT_OF_STOCK: "FF5263", HOLIDAY: "ED45DB" };
 const validDay = (v: string | null) => { if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false; const date = new Date(`${v}T00:00:00Z`); return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === v; };
 function styledHeader(row: ExcelJS.Row) { row.height = 25; row.eachCell(cell => { cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 }; cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF10243D" } }; cell.alignment = { vertical: "middle" }; cell.border = { bottom: { style: "thin", color: { argb: "FF1685FF" } } }; }); }
+function columnRef(index: number) { let value = index; let label = ""; while (value > 0) { const remainder = (value - 1) % 26; label = String.fromCharCode(65 + remainder) + label; value = Math.floor((value - 1) / 26); } return label; }
 
 export async function GET(request: NextRequest) {
   const { response, user } = await requireUser(); if (response) return response;
@@ -53,6 +54,34 @@ export async function GET(request: NextRequest) {
   const details = workbook.addWorksheet("Rincian", { views: [{ state: "frozen", ySplit: 1 }] }); details.columns = [{ header: "Tanggal", key: "date", width: 14 }, { header: "Nama akun", key: "name", width: 28 }, { header: "Username", key: "username", width: 22 }, { header: "Core", key: "core", width: 20 }, { header: "Sub-core", key: "subCore", width: 20 }, { header: "Platform", key: "platform", width: 18 }, { header: "Status", key: "status", width: 20 }, { header: "Catatan", key: "notes", width: 38 }, { header: "Diubah oleh", key: "updatedBy", width: 24 }]; styledHeader(details.getRow(1));
   for (const row of rows) { const r = details.addRow({ date: row.date, name: row.account.name, username: row.account.username, core: row.account.core, subCore: row.account.subCore, platform: row.account.platform, status: labels[row.status], notes: row.notes, updatedBy: row.updatedBy.name }); r.getCell(1).numFmt = "dd mmm yyyy"; r.getCell(7).font = { bold: true, color: { argb: `FF${colors[row.status]}` } }; if (r.number % 2 === 0) r.eachCell(cell => { cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF3F7FB" } }; }); }
   details.autoFilter = { from: "A1", to: "I1" };
+  if (mode === "month" && !date) {
+    const [year, month] = periodName.split("-").map(Number);
+    const dayCount = new Date(year, month, 0).getDate();
+    const matrixAccounts = await db.account.findMany({ where: { ...account, isActive: true }, orderBy: [{ core: "asc" }, { name: "asc" }], select: { id: true, name: true } });
+    const matrix = workbook.addWorksheet("Matriks", { views: [{ state: "frozen", xSplit: 1, ySplit: 1, activeCell: "B2" }] });
+    matrix.columns = [{ header: "Nama Akun", key: "account", width: 30 }, ...Array.from({ length: dayCount }, (_, index) => ({ header: `${index + 1} ${new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(new Date(Date.UTC(year, month - 1, index + 1)))}`, key: `day${index + 1}`, width: 14 }))];
+    styledHeader(matrix.getRow(1));
+    const statusByAccountAndDate = new Map(rows.map(row => [`${row.accountId}:${row.date.toISOString().slice(0, 10)}`, row.status]));
+    for (const accountRow of matrixAccounts) {
+      const values: Record<string, string> = { account: accountRow.name };
+      for (let day = 1; day <= dayCount; day++) {
+        const state = statusByAccountAndDate.get(`${accountRow.id}:${`${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`}`);
+        values[`day${day}`] = state ? labels[state] : "";
+      }
+      matrix.addRow(values);
+    }
+    matrix.autoFilter = { from: "A1", to: `${columnRef(dayCount + 1)}1` };
+    matrix.eachRow((row, rowNumber) => row.eachCell((cell, columnNumber) => {
+      cell.alignment = { vertical: "middle", horizontal: columnNumber === 1 ? "left" : "center", wrapText: true };
+      if (rowNumber > 1 && columnNumber > 1) {
+        const label = String(cell.value ?? "");
+        const state = statuses.find(candidate => labels[candidate] === label);
+        if (state) { cell.font = { bold: true, color: { argb: `FF${colors[state]}` } }; cell.alignment = { vertical: "middle", horizontal: "center" }; }
+      }
+      if (rowNumber > 1 && rowNumber % 2 === 0) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF3F7FB" } };
+    }));
+    matrix.eachRow(row => { row.height = 22; });
+  }
   const daily = workbook.addWorksheet("Harian", { views: [{ state: "frozen", ySplit: 1 }] }); daily.columns = [{ header: "Tanggal", key: "date", width: 16 }, ...statuses.map(s => ({ header: labels[s], key: s, width: 18 })), { header: "Total", key: "total", width: 14 }]; styledHeader(daily.getRow(1));
   const byDate = new Map<string, Record<string, number>>(); for (const row of rows) { const key = row.date.toISOString().slice(0, 10); const record = byDate.get(key) ?? Object.fromEntries([...statuses, "total"].map(s => [s, 0])); record[row.status]++; record.total++; byDate.set(key, record); }
   for (const [date, record] of byDate) { const r = daily.addRow({ date: new Date(`${date}T00:00:00Z`), ...record }); r.getCell(1).numFmt = "dd mmm yyyy"; for (let i = 2; i <= r.cellCount; i++) r.getCell(i).numFmt = "#,##0"; }
