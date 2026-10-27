@@ -554,3 +554,18 @@ html[data-theme="light"]{--login-bg:#f2f6fb;--login-story:#f4f8fc;--login-story-
 @media(max-width:900px){.matrix-scroll{max-height:calc(100dvh - 340px)}.matrix .matrix-corner,.matrix .matrix-account-cell{width:160px;min-width:160px;max-width:160px}.matrix .account-head strong,.matrix .account-head span{max-width:134px}.tracker-matrix-panel .calendar-toolbar{justify-content:flex-start}}
 @media(max-width:600px){.matrix-scroll{max-height:calc(100dvh - 305px);min-height:300px}.matrix-scroll-comfortable{max-height:72dvh}.matrix th,.matrix td{width:72px;min-width:72px;max-width:72px;padding:3px}.matrix .matrix-corner,.matrix .matrix-account-cell{width:132px;min-width:132px;max-width:132px;padding-left:8px;padding-right:7px}.matrix .account-head strong,.matrix .account-head span{max-width:112px}.matrix .matrix-account-cell,.matrix tbody td{height:40px}.matrix-cell{font-size:8px;min-height:28px}.matrix--comfortable th,.matrix--comfortable td{width:90px;min-width:90px;max-width:90px}.matrix--comfortable .matrix-corner,.matrix--comfortable .matrix-account-cell{width:150px;min-width:150px;max-width:150px}.matrix-tools .matrix-search{width:min(100%,220px);flex:1 1 180px}}
 @media(max-width:360px){.matrix-scroll{max-height:calc(100dvh - 315px)}.matrix .matrix-corner,.matrix .matrix-account-cell{width:118px;min-width:118px;max-width:118px}.matrix .account-head strong,.matrix .account-head span{max-width:98px}}
+
+/* Native select popups need their own palette; the surrounding .select wrapper
+   does not control the browser/OS-rendered option list. */
+select{color-scheme:dark;accent-color:var(--blue)}
+select option,select optgroup{background-color:#0a192b;color:#e6eef9}
+select option:checked{background-color:#1685ff;color:#fff}
+select option:hover,select option:focus{background-color:#1b3d61;color:#fff}
+select:focus-visible{outline:2px solid #1685ff;outline-offset:1px}
+select:hover:not(:disabled){border-color:#42678e}
+html[data-theme="light"] select{color-scheme:light}
+html[data-theme="light"] select option,html[data-theme="light"] select optgroup{background-color:#fff;color:#172b42}
+html[data-theme="light"] select option:checked{background-color:#1685ff;color:#fff}
+html[data-theme="light"] select option:hover,html[data-theme="light"] select option:focus{background-color:#dbeeff;color:#123c68}
+html[data-theme="light"] select:focus-visible{outline-color:#1685ff}
+html[data-theme="light"] .form-field select{background-color:#fff;color:#172b42;border-color:#cbd8e6}
