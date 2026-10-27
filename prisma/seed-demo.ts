@@ -20,8 +20,8 @@ const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required to create the demo account.");
 const email = process.env.DEMO_EMAIL?.trim().toLowerCase();
 const password = process.env.DEMO_PASSWORD;
-if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password || password.length < 12) {
-  throw new Error("Set a valid DEMO_EMAIL and a unique DEMO_PASSWORD of at least 12 characters.");
+if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password || password.length < 8) {
+  throw new Error("Set a valid DEMO_EMAIL and a DEMO_PASSWORD of at least 8 characters.");
 }
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 1 }) });

@@ -15,7 +15,7 @@ A responsive daily upload tracker built with Next.js App Router, TypeScript, Pos
 
 ### Development or staging demo account
 
-For local testing, set `APP_ENV=development`, `DEMO_LOGIN_ENABLED=true`, `DEMO_EMAIL` to a dedicated email, and `DEMO_PASSWORD` to a unique password of at least 12 characters. Apply migrations, then run `npm run db:seed-demo`. The script creates a least-privilege `DEMO` user and a small set of sample accounts/statuses. It refuses to convert an existing non-demo user and never runs during a Vercel Production build. Set `DEMO_ACCOUNT_READY=true` only after the seed succeeds; the login page then displays the email and password with copy controls. Do not reuse an administrator's email or password.
+For local testing, set `APP_ENV=development`, `DEMO_LOGIN_ENABLED=true`, `DEMO_EMAIL` to a dedicated email, and `DEMO_PASSWORD` to a password of at least 8 characters. Demo credentials are intentionally public, so keep this account isolated from administrator and workspace data. Apply migrations, then run `npm run db:seed-demo`. The script creates a least-privilege `DEMO` user and a small set of sample accounts/statuses. It refuses to convert an existing non-demo user and never runs during a Vercel Production build. Set `DEMO_ACCOUNT_READY=true` only after the seed succeeds; the login page then displays the email and password with copy controls. Do not reuse an administrator's email or password.
 
 For Vercel Preview, set the demo credentials in **Preview only**, set `APP_ENV=staging`, and run the seed against the Preview database from a trusted shell. Set `DEMO_ACCOUNT_READY=true` after successful provisioning. The database scopes demo accounts and tracker history to the demo user; ordinary users see only workspace-owned records.
 
