@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
-
-type Theme = "dark" | "light";
+import { Monitor, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("dark");
-  useEffect(() => { setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark"); }, []);
-  function toggle() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem("dtrminelabs-theme", next); } catch { /* Theme still applies for this page view. */ }
-    setTheme(next);
-  }
-  return <button type="button" className="top-icon theme-toggle" onClick={toggle} aria-label={theme === "dark" ? "Aktifkan tema terang" : "Aktifkan tema gelap"} title={theme === "dark" ? "Tema terang" : "Tema gelap"}>{theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}</button>;
+  const { preference, resolvedTheme, cyclePreference } = useTheme();
+  const preferenceLabel = preference === "system" ? "Sistem" : preference === "dark" ? "Gelap" : "Terang";
+  const nextLabel = preference === "system" ? "gelap" : preference === "dark" ? "terang" : "sistem";
+  const Icon = preference === "system" ? Monitor : resolvedTheme === "dark" ? Sun : Moon;
+
+  return <button
+    type="button"
+    className="top-icon theme-toggle"
+    onClick={cyclePreference}
+    aria-label={`Tema ${preferenceLabel}. Klik untuk beralih ke ${nextLabel}.`}
+    title={`Tema ${preferenceLabel} · klik untuk beralih ke ${nextLabel}`}
+  ><Icon size={16} /></button>;
 }
