@@ -4,11 +4,9 @@ import LoginForm from "@/components/login-form";
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
-  const allowedEnvironment = process.env.APP_ENV === "development" || process.env.APP_ENV === "staging";
-  const canFillDemo = allowedEnvironment
-    && process.env.VERCEL_ENV !== "production"
-    && process.env.DEMO_LOGIN_ENABLED === "true"
-    && process.env.DEMO_ADMIN_EMAIL === "admin@dtrminelabs.com"
-    && Boolean(process.env.DEMO_ADMIN_PASSWORD);
-  return <LoginForm demo={canFillDemo ? { email: process.env.DEMO_ADMIN_EMAIL!, password: process.env.DEMO_ADMIN_PASSWORD! } : null} />;
+  const demoReady = process.env.DEMO_LOGIN_ENABLED === "true"
+    && process.env.DEMO_ACCOUNT_READY === "true"
+    && Boolean(process.env.DEMO_EMAIL)
+    && Boolean(process.env.DEMO_PASSWORD);
+  return <LoginForm demo={demoReady ? { email: process.env.DEMO_EMAIL!, password: process.env.DEMO_PASSWORD! } : null} />;
 }

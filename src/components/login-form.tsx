@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, Check, Eye, EyeOff, Grid2X2, LockKeyhole, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, Check, Clipboard, Eye, EyeOff, Grid2X2, LockKeyhole, ShieldCheck } from "lucide-react";
 
 type DemoCredentials = { email: string; password: string } | null;
 const sampleRows = [
@@ -18,6 +18,7 @@ export default function LoginForm({ demo }: { demo: DemoCredentials }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState<"email" | "password" | "">("");
   const requestController = useRef<AbortController | null>(null);
   const isMounted = useRef(true);
 
@@ -56,6 +57,17 @@ export default function LoginForm({ demo }: { demo: DemoCredentials }) {
     }
   }
 
+  async function copyDemo(value: string, field: "email" | "password") {
+    if (!demo) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(field);
+      window.setTimeout(() => setCopied(current => current === field ? "" : current), 1800);
+    } catch {
+      setError("Clipboard tidak tersedia. Pilih kredensial demo lalu salin secara manual.");
+    }
+  }
+
   return <main className="login-layout">
     <section className="login-story" aria-label="Tentang Dtrminelabs Upload Tracker">
       <div className="login-brand"><span className="login-brand-mark"><span>D</span><i/><i/><i/><i/></span><span className="login-brand-copy"><strong>DTRMINELABS</strong><small>UPLOAD TRACKER</small></span></div>
@@ -76,8 +88,8 @@ export default function LoginForm({ demo }: { demo: DemoCredentials }) {
           <div className="password-label-row"><label className="login-label" htmlFor="login-password">Kata sandi</label></div><div className="login-input-wrap password-input"><input id="login-password" type={showPassword?"text":"password"} autoComplete="current-password" required maxLength={200} value={password} onChange={event=>setPassword(event.target.value)} placeholder="Masukkan kata sandi" aria-describedby={error?"login-error":undefined}/><button type="button" className="password-toggle" onClick={()=>setShowPassword(value=>!value)} aria-label={showPassword?"Sembunyikan kata sandi":"Tampilkan kata sandi"} aria-pressed={showPassword}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></div>
           {error&&<div id="login-error" className="login-error" role="alert"><span>!</span><p>{error}</p></div>}
           <button type="submit" className="login-submit" disabled={busy}>{busy?<><span className="button-spinner"/>Memeriksa akses...</>:<>Masuk ke workspace<ArrowUpRight size={17}/></>}</button>
-          {demo&&<button type="button" className="demo-fill" onClick={()=>{setEmail(demo.email);setPassword(demo.password);setError("")}}>Isi Akun Demo<span>DEV / STAGING</span></button>}
         </form>
+        {demo&&<section className="demo-credentials" aria-label="Kredensial akun demo"><div className="demo-heading"><div><strong>Coba Dtrminelabs</strong><span>Demo mode · data terisolasi</span></div><span className="demo-pill">DEMO</span></div><div className="demo-credential-row"><span>Username</span><code>{demo.email}</code><button type="button" onClick={()=>void copyDemo(demo.email,"email")} aria-label="Salin username demo">{copied==="email"?<Check size={14}/>:<Clipboard size={14}/>}</button></div><div className="demo-credential-row"><span>Password</span><code>{demo.password}</code><button type="button" onClick={()=>void copyDemo(demo.password,"password")} aria-label="Salin password demo">{copied==="password"?<Check size={14}/>:<Clipboard size={14}/>}</button></div><p>Masukkan kredensial ini pada form untuk mencoba tracker demo.</p><div className="sr-only" aria-live="polite">{copied?`${copied==="email"?"Username":"Password"} disalin`:""}</div></section>}
         <div className="login-security"><ShieldCheck size={15}/><span>Akses workspace terlindungi</span><i/><LockKeyhole size={13}/><span>Session terenkripsi</span></div>
       </div>
       <div className="login-panel-foot"><span>© {new Date().getFullYear()} Dtrminelabs</span><span><i/> Workspace sign in</span></div>

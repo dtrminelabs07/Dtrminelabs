@@ -9,7 +9,10 @@ const secret = () => {
   if (!value || value.length < 32) throw new Error("AUTH_SECRET must contain at least 32 characters.");
   return new TextEncoder().encode(value);
 };
-export type SessionUser = { id: string; name: string; email: string; role: "ADMIN" | "STAFF" };
+export type SessionUser = { id: string; name: string; email: string; role: "ADMIN" | "STAFF" | "DEMO" };
+export function accountOwnerScope(user: Pick<SessionUser, "id" | "role">) {
+  return { ownerId: user.role === "DEMO" ? user.id : null };
+}
 export async function createSession(user: SessionUser) {
   const token = await new SignJWT(user).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("12h").sign(secret());
   const jar = await cookies();

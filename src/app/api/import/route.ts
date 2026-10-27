@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   const input = z.object({ rows: z.array(z.unknown()).min(1).max(10000), commit: z.boolean().optional() }).safeParse(await request.json().catch(() => null));
   if (!input.success) return NextResponse.json({ error: "Format impor tidak valid atau file kosong." }, { status: 400 });
 
-  const accounts = await db.account.findMany({ select: { id: true, name: true, isActive: true } });
+  const accounts = await db.account.findMany({ where: { ownerId: null }, select: { id: true, name: true, isActive: true } });
   const byName = new Map<string, typeof accounts>();
   for (const account of accounts) {
     const key = account.name.toLocaleLowerCase("id-ID");

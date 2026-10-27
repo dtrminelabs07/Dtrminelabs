@@ -11,6 +11,7 @@ datasource db {
 enum UserRole {
   ADMIN
   STAFF
+  DEMO
 }
 enum UploadStatus {
   COMPLETED
@@ -36,6 +37,7 @@ model User {
   createdUploads DailyUpload[] @relation("CreatedUploads")
   updatedUploads DailyUpload[] @relation("UpdatedUploads")
   activities   ActivityLog[]
+  demoAccounts Account[]     @relation("DemoAccounts")
 }
 
 model Account {
@@ -48,11 +50,14 @@ model Account {
   subCore   String?
   notes     String?
   isActive  Boolean       @default(true)
+  ownerId   String?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   uploads   DailyUpload[]
   activities ActivityLog[]
+  owner     User?         @relation("DemoAccounts", fields: [ownerId], references: [id], onDelete: Restrict)
   @@index([isActive, core, subCore])
+  @@index([ownerId, isActive, core, subCore])
   @@index([name])
 }
 
