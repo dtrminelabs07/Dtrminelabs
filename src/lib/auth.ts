@@ -9,7 +9,7 @@ const secret = () => {
   if (!value || value.length < 32) throw new Error("AUTH_SECRET must contain at least 32 characters.");
   return new TextEncoder().encode(value);
 };
-export type SessionUser = { id: string; name: string; email: string; role: "ADMIN" | "STAFF" | "DEMO" };
+export type SessionUser = { id: string; name: string; username: string | null; email: string; role: "ADMIN" | "STAFF" | "DEMO" };
 export function accountOwnerScope(user: Pick<SessionUser, "id" | "role">) {
   return { ownerId: user.role === "DEMO" ? user.id : null };
 }
@@ -24,7 +24,7 @@ export async function getSession(): Promise<SessionUser | null> {
     if (!token) return null;
     const { payload } = await jwtVerify(token, secret());
     if (typeof payload.id !== "string") return null;
-    const current = await db.user.findUnique({ where: { id: payload.id }, select: { id: true, email: true, name: true, role: true } });
+    const current = await db.user.findUnique({ where: { id: payload.id }, select: { id: true, email: true, name: true, username: true, role: true } });
     if (!current) return null;
     return current;
   } catch { return null; }
@@ -40,10 +40,11 @@ export async function requireAdmin() {
   if (result.user?.role !== "ADMIN") return { user: null, response: NextResponse.json({ error: "Akses khusus admin." }, { status: 403 }) };
   return result;
 }
-export async function verifyCredentials(email: string, password: string) {
-  const user = await db.user.findUnique({ where: { email: email.toLowerCase() } });
+export async function verifyCredentials(username: string, password: string) {
+  const user = await db.user.findUnique({ where: { username: username.trim().toLowerCase() } });
   if (!user) return null;
   const bcrypt = await import("bcryptjs");
   if (!(await bcrypt.compare(password, user.passwordHash))) return null;
-  return { id: user.id, name: user.name, email: user.email, role: user.role } as SessionUser;
+  return { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role } as SessionUser;
 }
+

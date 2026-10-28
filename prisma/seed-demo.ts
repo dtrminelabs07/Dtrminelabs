@@ -19,9 +19,10 @@ if (process.env.DEMO_LOGIN_ENABLED !== "true") {
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required to create the demo account.");
 const email = process.env.DEMO_EMAIL?.trim().toLowerCase();
+const username = process.env.DEMO_USERNAME?.trim().toLowerCase();
 const password = process.env.DEMO_PASSWORD;
-if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password || password.length < 8) {
-  throw new Error("Set a valid DEMO_EMAIL and a DEMO_PASSWORD of at least 8 characters.");
+if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !username || !/^[a-z0-9._-]{3,80}$/.test(username) || !password || password.length < 8) {
+  throw new Error("Set a valid DEMO_EMAIL, DEMO_USERNAME, and a DEMO_PASSWORD of at least 8 characters.");
 }
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 1 }) });
@@ -42,8 +43,8 @@ async function main() {
 
   const passwordHash = bcrypt.hashSync(demoPassword, 12);
   const demoUser = existing
-    ? await prisma.user.update({ where: { id: existing.id }, data: { name: "Dtrminelabs Demo", passwordHash, role: UserRole.DEMO } })
-    : await prisma.user.create({ data: { name: "Dtrminelabs Demo", email: demoEmail, passwordHash, role: UserRole.DEMO } });
+    ? await prisma.user.update({ where: { id: existing.id }, data: { name: "Dtrminelabs Demo", username, passwordHash, role: UserRole.DEMO } })
+    : await prisma.user.create({ data: { name: "Dtrminelabs Demo", username, email: demoEmail, passwordHash, role: UserRole.DEMO } });
 
   const today = new Date();
   const date = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
@@ -59,10 +60,11 @@ async function main() {
       await prisma.activityLog.create({ data: { accountId: account.id, dailyUploadId: upload.id, actorId: demoUser.id, action: ActivityAction.CREATED, newStatus: sample.status, description: `Demo mencatat status ${sample.name}` } });
     }
   }
-  console.log(`Isolated demo account provisioned for ${environment}: ${demoEmail}`);
+  console.log(`Isolated demo account provisioned for ${environment}.`);
 }
 
 main().catch(error => {
   console.error("Demo account was not created.", error instanceof Error ? error.message : "Unknown database error.");
   process.exitCode = 1;
 }).finally(() => prisma.$disconnect());
+
