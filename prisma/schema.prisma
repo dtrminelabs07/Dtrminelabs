@@ -38,6 +38,7 @@ model User {
   createdUploads DailyUpload[] @relation("CreatedUploads")
   updatedUploads DailyUpload[] @relation("UpdatedUploads")
   activities   ActivityLog[]
+  accountNotes AccountNote[]
   demoAccounts Account[]     @relation("DemoAccounts")
 }
 
@@ -49,17 +50,31 @@ model Account {
   platform  String?
   core      String
   subCore   String?
-  notes     String?
+  legacyNotes String?        @map("notes")
   isActive  Boolean       @default(true)
   ownerId   String?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   uploads   DailyUpload[]
   activities ActivityLog[]
+  privateNotes AccountNote[]
   owner     User?         @relation("DemoAccounts", fields: [ownerId], references: [id], onDelete: Restrict)
   @@index([isActive, core, subCore])
   @@index([ownerId, isActive, core, subCore])
   @@index([name])
+}
+
+model AccountNote {
+  id        String   @id @default(cuid())
+  accountId String
+  authorId  String?
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  @@index([accountId, createdAt])
+  @@index([authorId])
 }
 
 model DailyUpload {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Clock3, RefreshCw } from "lucide-react";
+import { dateKeyInTimezone } from "@/lib/date";
 
 const statuses = ["COMPLETED", "PENDING", "UPLOADED", "LIMIT", "OUT_OF_STOCK", "HOLIDAY"] as const;
 type Status = typeof statuses[number];
@@ -11,9 +12,7 @@ type Upload = { id: string; accountId: string; date: string; status: Status; not
 const labels: Record<Status, string> = { COMPLETED: "Selesai", PENDING: "Belum dikerjakan", UPLOADED: "Sudah upload", LIMIT: "Limit", OUT_OF_STOCK: "Stok habis", HOLIDAY: "Libur" };
 const colors: Record<Status, string> = { COMPLETED: "#10d6a0", PENDING: "#ffc83d", UPLOADED: "#20b8ff", LIMIT: "#c477ff", OUT_OF_STOCK: "#ff5263", HOLIDAY: "#ed45db" };
 const keyFor = (date: Date) => String(date.getFullYear()) + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
-const todayParts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
-const todayField = (type: string) => todayParts.find(part => part.type === type)?.value ?? "";
-const today = todayField("year") + "-" + todayField("month") + "-" + todayField("day");
+const today = dateKeyInTimezone();
 
 export default function CalendarPage() {
   const [month, setMonth] = useState(today.slice(0, 7));

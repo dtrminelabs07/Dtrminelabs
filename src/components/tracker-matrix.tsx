@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, Search, SlidersHorizontal } from "lucide-react";
+import { monthKeyInTimezone } from "@/lib/date";
 
 type Account = {
   id: string;
@@ -10,7 +11,6 @@ type Account = {
   core: string;
   subCore: string | null;
   platform: string | null;
-  notes: string | null;
 };
 type Upload = { id: string; accountId: string; date: string; status: Status; notes: string | null; updatedAt: string };
 type Status = "COMPLETED" | "PENDING" | "UPLOADED" | "LIMIT" | "OUT_OF_STOCK" | "HOLIDAY";
@@ -33,8 +33,8 @@ function dayKey(year: number, month: number, day: number) {
 }
 
 export default function TrackerMatrix({ onSaved }: { onSaved?: () => void } = {}) {
-  const now = new Date();
-  const [view, setView] = useState<MonthView>({ year: now.getFullYear(), month: now.getMonth() });
+  const initialMonth = monthKeyInTimezone();
+  const [view, setView] = useState<MonthView>(() => { const [year, month] = initialMonth.split("-").map(Number); return { year, month: month - 1 }; });
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [busy, setBusy] = useState(true);
@@ -51,7 +51,7 @@ export default function TrackerMatrix({ onSaved }: { onSaved?: () => void } = {}
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [comfortable, setComfortable] = useState(false);
-  const [yearInput, setYearInput] = useState(String(now.getFullYear()));
+  const [yearInput, setYearInput] = useState(initialMonth.slice(0, 4));
 
   const load = useCallback(async () => {
     setBusy(true);
@@ -104,7 +104,7 @@ export default function TrackerMatrix({ onSaved }: { onSaved?: () => void } = {}
   const filtered = useMemo(() => accounts.filter(account => {
     if (core && account.core !== core) return false;
     if (subCore && account.subCore !== subCore) return false;
-    if (query && !`${account.name} ${account.username ?? ""} ${account.core} ${account.subCore ?? ""} ${account.platform ?? ""} ${account.notes ?? ""}`.toLowerCase().includes(query.toLowerCase())) return false;
+    if (query && !`${account.name} ${account.username ?? ""} ${account.core} ${account.subCore ?? ""} ${account.platform ?? ""}`.toLowerCase().includes(query.toLowerCase())) return false;
     if (!status) return true;
     if (focusDate) {
       const state = dateStatus.get(`${account.id}:${focusDate}`)?.status;

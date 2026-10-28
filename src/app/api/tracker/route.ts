@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const start = selectedDate ? new Date(`${selectedDate}T00:00:00.000Z`) : (() => { const [year, m] = month!.split("-").map(Number); return new Date(Date.UTC(year, m - 1, 1)); })();
   const end = selectedDate ? new Date(start.getTime() + 86_400_000) : (() => { const [year, m] = month!.split("-").map(Number); return new Date(Date.UTC(year, m, 1)); })();
   const [accounts, uploads] = await Promise.all([
-    db.account.findMany({ where: { ...accountOwnerScope(user!), isActive: true }, orderBy: [{ core: "asc" }, { name: "asc" }] }),
+    db.account.findMany({ where: { ...accountOwnerScope(user!), isActive: true }, orderBy: [{ core: "asc" }, { name: "asc" }], select: { id: true, name: true, username: true, avatarUrl: true, platform: true, core: true, subCore: true } }),
     db.dailyUpload.findMany({ where: { date: { gte: start, lt: end }, account: { ...accountOwnerScope(user!), isActive: true } }, select: { id: true, accountId: true, date: true, status: true, notes: true, updatedAt: true } })
   ]);
   return NextResponse.json({ accounts, uploads });

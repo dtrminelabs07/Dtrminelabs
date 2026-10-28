@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, DatabaseBackup, Download, FileUp, LockKeyhole, Palette, SlidersHorizontal } from "lucide-react";
 import { parseCsv } from "@/lib/csv";
 import ThemeToggle from "@/components/theme-toggle";
+import { monthKeyInTimezone } from "@/lib/date";
 
 type Preview = { total: number; valid: number; errors: { row: number; message: string }[]; duplicates: { row: number; message: string }[]; conflicts: { row: number; message: string }[]; canImport: boolean };
 type AccountOption = { id: string; name: string };
@@ -14,7 +15,7 @@ export default function SettingsPage() {
   const [preview, setPreview] = useState<Preview | null>(null);
   const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
-  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [month, setMonth] = useState(monthKeyInTimezone);
   const [accountId, setAccountId] = useState("");
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);

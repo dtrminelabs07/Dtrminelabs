@@ -30,7 +30,7 @@ if (target === "production" && !actualHost.endsWith(".neon.tech")) {
   throw new Error("Production promotion is restricted to a verified Neon database hostname.");
 }
 if (!email || !username || !/^[a-z0-9._-]{3,80}$/.test(username)) {
-  throw new Error("Set the configured DEMO_EMAIL and the official ADMIN_USERNAME (3â€“80 letters, numbers, dots, underscores, or hyphens).");
+  throw new Error("Set the configured DEMO_EMAIL and the official ADMIN_USERNAME (3 to 80 letters, numbers, dots, underscores, or hyphens).");
 }
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString, max: 1 }) });
@@ -60,4 +60,3 @@ main().catch(error => {
   console.error("Administrator promotion stopped safely.", error instanceof Error ? error.message : "Unknown database error.");
   process.exitCode = 1;
 }).finally(() => prisma.$disconnect());
-

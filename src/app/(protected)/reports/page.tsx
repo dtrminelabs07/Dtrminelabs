@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, ChevronLeft, ChevronRight, Download, FileSpreadsheet, RefreshCw, Search } from "lucide-react";
 import ReportTrendChart from "@/components/report-trend-chart";
+import { dateKeyInTimezone, monthKeyInTimezone } from "@/lib/date";
 
 const statuses = ["COMPLETED", "PENDING", "UPLOADED", "LIMIT", "OUT_OF_STOCK", "HOLIDAY"] as const;
 type Status = typeof statuses[number];
@@ -10,11 +11,11 @@ const colors: Record<Status, string> = { COMPLETED: "#10d6a0", PENDING: "#ffc83d
 type Counts = Record<Status, number>;
 type Account = { id: string; name: string; core: string; subCore: string | null };
 type ReportData = { period: { start: string; end: string }; counts: Counts; comparison: Counts; trend: Array<{ key: string } & Counts>; trendUnit: "day" | "month"; rows: Array<{ id: string; date: string; status: Status; notes: string | null; account: { name: string; username: string | null; core: string; subCore: string | null }; updatedBy: { name: string } }>; total: number; page: number; pages: number; accounts: Account[]; categories: string[] };
-const currentMonth = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; };
+const currentMonth = () => monthKeyInTimezone();
 
 export default function ReportsPage() {
-  const [mode, setMode] = useState<"month" | "year" | "custom">("month"); const [month, setMonth] = useState(currentMonth()); const [year, setYear] = useState(String(new Date().getFullYear()));
-  const [from, setFrom] = useState(`${currentMonth()}-01`); const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
+  const [mode, setMode] = useState<"month" | "year" | "custom">("month"); const [month, setMonth] = useState(currentMonth()); const [year, setYear] = useState(currentMonth().slice(0, 4));
+  const [from, setFrom] = useState(`${currentMonth()}-01`); const [to, setTo] = useState(dateKeyInTimezone());
   const [accountId, setAccountId] = useState(""); const [status, setStatus] = useState(""); const [core, setCore] = useState(""); const [subCore, setSubCore] = useState(""); const [q, setQ] = useState(""); const [page, setPage] = useState(1);
   const [data, setData] = useState<ReportData | null>(null); const [busy, setBusy] = useState(true); const [error, setError] = useState(""); const [exporting, setExporting] = useState(false); const [exportSuccess, setExportSuccess] = useState("");
   const params = useMemo(() => { const p = new URLSearchParams({ mode, page: String(page) }); if (mode === "month") p.set("month", month); if (mode === "year") p.set("year", year); if (mode === "custom") { p.set("from", from); p.set("to", to); } if (accountId) p.set("accountId", accountId); if (status) p.set("status", status); if (core) p.set("core", core); if (subCore) p.set("subCore", subCore); if (q.trim()) p.set("q", q.trim()); return p; }, [mode, page, month, year, from, to, accountId, status, core, subCore, q]);

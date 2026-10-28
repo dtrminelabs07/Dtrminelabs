@@ -16,8 +16,17 @@ if (process.env.DEMO_LOGIN_ENABLED !== "true") {
   throw new Error("Set DEMO_LOGIN_ENABLED=true in the target environment before seeding.");
 }
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required to create the demo account.");
+if (productionSeed) {
+  let targetHost = "";
+  try { targetHost = new URL(connectionString).hostname; } catch { throw new Error("The configured database URL is invalid."); }
+  const confirmedHost = process.env.DEMO_SEED_PRODUCTION_DATABASE_HOST;
+  const confirmation = process.env.DEMO_SEED_PRODUCTION_CONFIRM;
+  if (!targetHost || confirmedHost !== targetHost || confirmation !== `create-demo-on:${targetHost}`) {
+    throw new Error("Production demo seeding requires the exact database host and DEMO_SEED_PRODUCTION_CONFIRM=create-demo-on:<host>.");
+  }
+}
 const email = process.env.DEMO_EMAIL?.trim().toLowerCase();
 const username = process.env.DEMO_USERNAME?.trim().toLowerCase();
 const password = process.env.DEMO_PASSWORD;

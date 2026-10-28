@@ -19,21 +19,23 @@ For isolated local or staging data, set `APP_ENV=development` (or `staging`), `D
 
 For Vercel Preview, use a separate Preview database and run the demo seed from a trusted shell only when needed. The database scopes demo accounts and tracker history to the demo user; ordinary users see only workspace-owned records.
 
-Do not create a public demo account in Vercel Production. To promote an existing isolated demo user, first verify the target database and provide the official `ADMIN_USERNAME`. After applying the username migration, run `npm run db:promote-demo-admin` once from a trusted shell with `DEMO_EMAIL`, `ADMIN_USERNAME`, `PROMOTE_DEMO_ADMIN_TARGET`, an exactly matching `PROMOTE_DEMO_ADMIN_CONFIRM` (`local` or `production`), and `PROMOTE_DEMO_ADMIN_DATABASE_HOST` set to the exact host in `DIRECT_URL`/`DATABASE_URL`. Production promotion is restricted to a matching Neon hostname. The script requires exactly one matching `DEMO` user, retains its password hash and upload history, and moves its owned accounts into the shared workspace. It never runs during a Vercel Production build.
+Do not create a public demo account in Vercel Production. Production demo seeding, if explicitly required for an isolated verified target, uses `DEMO_SEED_PRODUCTION=true`, `DEMO_SEED_PRODUCTION_DATABASE_HOST`, and `DEMO_SEED_PRODUCTION_CONFIRM=create-demo-on:<host>` in a trusted one-time shell; it never runs during a Vercel Production build, and the credentials must not be exposed on the login page. The seed refuses to replace a non-demo user with the same email.
+
+To promote an existing isolated demo user to administrator, first verify the target database and provide the official `ADMIN_USERNAME`. After applying the username migration, run `npm run db:promote-demo-admin` once from a trusted shell with `DEMO_EMAIL`, `ADMIN_USERNAME`, `PROMOTE_DEMO_ADMIN_TARGET`, an exactly matching `PROMOTE_DEMO_ADMIN_CONFIRM` (`local` or `production`), and `PROMOTE_DEMO_ADMIN_DATABASE_HOST` set to the exact host in `DIRECT_URL`/`DATABASE_URL`. Production promotion is restricted to a matching Neon hostname. The script requires exactly one matching `DEMO` user, retains its password hash and upload history, and moves its owned accounts into the shared workspace. It never runs during a Vercel Production build.
 
 No public registration route is provided. Admins create staff accounts from **Pengguna**. Passwords are hashed with bcrypt. Sessions are signed, HTTP-only, SameSite=Lax cookies and authorization reads the current role from PostgreSQL on each request.
 
 ## Database and deployment
 
 - Prisma schema: `prisma/schema.prisma`
-- Migrations: initial schema, demo isolation, and `prisma/migrations/202610280001_usernames` (adds a nullable unique username; existing rows remain intact until usernames are provisioned).
+- Migrations: initial schema, demo isolation, `prisma/migrations/202610280001_usernames` (adds a nullable unique username; existing rows remain intact until usernames are provisioned), and `prisma/migrations/202610280002_private_account_notes` (copies legacy account notes into the admin-only notes table without dropping the original column).
 - Prisma 7 uses `prisma.config.ts` for migration connection settings and the generated TypeScript client at `src/generated/prisma`. Runtime queries use Prisma's PostgreSQL driver adapter (`@prisma/adapter-pg`).
 - Use Neon pooled `DATABASE_URL` at runtime and the unpooled/direct `DIRECT_URL` for migrations.
-- In Vercel, configure `DATABASE_URL`, `DIRECT_URL`, and `AUTH_SECRET` for Production and Preview as appropriate. Add initial admin variables only to a secure one-time seed environment. Demo credentials are not shown on the public login page; run demo seeds only in isolated internal environments.
+- In Vercel, configure `DATABASE_URL`, `DIRECT_URL`, and `AUTH_SECRET` for Production and Preview as appropriate. Add initial admin variables only to a secure one-time seed environment. Do not publish demo credentials on the login page; run demo seeds only against isolated environments.
 - Deploy the project to Vercel. Before the first production deployment, run `npm run db:migrate` against the production database from a trusted environment. Run the admin seed once, verify login, then remove the initial password variables from the deployment environment.
 - Subsequent schema changes should be committed as additive Prisma migrations and applied with `npm run db:migrate` before deploying code that depends on them. Never reset a production database.
 
-Vercel build runs Prisma Client generation and `next build`. The username migration and account promotion have not been applied to any database from this workspace. Apply the additive migration to the verified target, provision usernames, promote the intended account, and verify login before deploying this version; a local `.env` does not configure Vercel.
+Vercel build runs Prisma Client generation and `next build`. Apply additive migrations to the verified target and provision required users before deploying code that depends on them; a local `.env` does not configure Vercel.
 
 ## Tracker behavior
 

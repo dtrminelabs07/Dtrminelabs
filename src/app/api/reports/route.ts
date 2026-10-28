@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   const page = Number(params.get("page") ?? 1); if (!Number.isSafeInteger(page) || page < 1) return NextResponse.json({ error: "Halaman tidak valid." }, { status: 400 });
   const accountScope = accountOwnerScope(user!); const accountId = params.get("accountId") || undefined;
   const core = params.get("core") || undefined; const subCore = params.get("subCore") || undefined; const q = params.get("q")?.trim();
-  const accountFilter = { ...accountScope, ...(accountId ? { id: accountId } : {}), ...(core ? { core } : {}), ...(subCore ? { subCore } : {}), ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { username: { contains: q, mode: "insensitive" as const } }, { core: { contains: q, mode: "insensitive" as const } }, { subCore: { contains: q, mode: "insensitive" as const } }, { notes: { contains: q, mode: "insensitive" as const } }] } : {}) };
+  const accountFilter = { ...accountScope, ...(accountId ? { id: accountId } : {}), ...(core ? { core } : {}), ...(subCore ? { subCore } : {}), ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" as const } }, { username: { contains: q, mode: "insensitive" as const } }, { core: { contains: q, mode: "insensitive" as const } }, { subCore: { contains: q, mode: "insensitive" as const } }] } : {}) };
   const where = { date: { gte: start, lt: end }, account: accountFilter, ...(parsed.success ? { status: parsed.data } : {}) };
   const size = 30;
   const [rawRows, total, accounts] = await Promise.all([
