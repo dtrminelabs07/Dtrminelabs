@@ -7,7 +7,7 @@ export async function GET() {
   const { response, user } = await requireUser();
   if (response) return response;
   const accounts = await db.account.findMany({
-    where: { ...accountOwnerScope(user!) },
+    where: { ...accountOwnerScope(user!), isActive: true },
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
     select: { id: true, name: true, username: true, isActive: true, productionProducts: { where: { isArchived: false }, select: { targetCount: true, completedCount: true } } }
   });
@@ -31,10 +31,17 @@ export async function POST(request: Request) {
   const account = await db.account.findFirst({ where: { id: parsed.data.accountId, ...accountOwnerScope(user!), isActive: true }, select: { id: true } });
   if (!account) return NextResponse.json({ error: "Akun aktif tidak ditemukan." }, { status: 404 });
   const { requestKey, ...fields } = parsed.data;
-  const product = await db.productionProduct.upsert({
-    where: { accountId_creationKey: { accountId: fields.accountId, creationKey: requestKey } },
-    create: { ...fields, creationKey: requestKey, createdById: user!.id },
-    update: {}
+  const completedCount = fields.completedCount ?? 0;
+  if (completedCount > fields.targetCount) return NextResponse.json({ error: "Progres awal tidak boleh melebihi target." }, { status: 400 });
+  const { initialNote, ...productFields } = fields;
+  const { product, isNew } = await db.$transaction(async tx => {
+    const existingProduct = await tx.productionProduct.findUnique({ where: { accountId_creationKey: { accountId: productFields.accountId, creationKey: requestKey } } });
+    if (existingProduct) return { product: existingProduct, isNew: false };
+    const created = await tx.productionProduct.create({ data: { ...productFields, completedCount, creationKey: requestKey, createdById: user!.id } });
+    if (completedCount > 0 || initialNote?.trim()) {
+      await tx.productionProgressChange.create({ data: { productId: created.id, actorId: user!.id, previousCompletedCount: 0, newCompletedCount: created.completedCount, note: initialNote?.trim() || null } });
+    }
+    return { product: created, isNew: true };
   });
-  return NextResponse.json(product, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json(product, { status: isNew ? 201 : 200, headers: { "Cache-Control": "private, no-store" } });
 }

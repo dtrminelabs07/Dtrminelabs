@@ -916,3 +916,35 @@ html[data-theme="light"] .account-card-actions{background:#f4f8fc}
   .matrix-cell{font-size:11px}
   .modal-actions{flex-wrap:wrap}
 }
+.home-navigation-page{max-width:1240px;min-height:calc(100vh - 68px)}
+.home-navigation-shortcuts{margin-top:18px}
+.home-navigation-shortcuts .dashboard-section-heading{margin-bottom:16px}
+.home-navigation-shortcuts .home-module-card{min-height:104px;padding:20px}
+.home-navigation-shortcuts .home-module-copy strong{font-size:15px}
+.home-navigation-shortcuts .home-module-copy small{font-size:13px;line-height:1.5}
+.production-account-status-summary{display:flex;align-items:center;flex-wrap:wrap;gap:12px 20px;margin-top:14px;color:var(--muted);font-size:12px}
+.production-account-status-summary span{display:inline-flex;align-items:center;gap:7px}
+.production-account-status-summary b{margin-left:auto;color:var(--warning,#ffc83d);font-weight:600}
+.state-dot{width:8px;height:8px;border-radius:50%;background:#71839a}
+.state-dot.done{background:#10d6a0}.state-dot.progress{background:#1685ff}.state-dot.pending{background:#ffc83d}
+.production-table-wrap{border:1px solid var(--border);border-radius:11px;background:var(--surface)}
+.production-products-table{min-width:850px}
+.production-products-table th,.production-products-table td{font-size:13px;padding:14px 16px;vertical-align:middle}
+.production-table-product{display:flex;flex-direction:column;gap:4px;min-width:180px;max-width:360px}
+.production-table-product strong{color:var(--text);font-size:14px}
+.production-table-product small{color:var(--muted);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.production-table-progress{display:flex;align-items:center;gap:9px;min-width:120px}
+.production-table-progress .production-progress-track{flex:1;min-width:55px}
+.production-table-progress b{font-size:12px;min-width:36px}
+.production-row-archived{opacity:.68}
+.production-product-description{max-width:720px;margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.production-no-products{color:var(--muted);font-size:12px}
+.production-account-open{display:flex;align-items:center;gap:6px;margin-top:4px;color:#1685ff;font-size:12px;font-weight:600}
+@media(max-width:700px){
+  .home-navigation-page{padding:20px 14px 32px}
+  .home-navigation-shortcuts .home-module-card{min-height:88px;padding:15px}
+  .home-navigation-shortcuts .home-module-copy strong{font-size:14px}
+  .production-account-status-summary{align-items:flex-start;flex-direction:column;gap:9px}
+  .production-account-status-summary b{margin-left:0}
+  .production-products-table{min-width:760px}
+}

@@ -51,3 +51,20 @@ export async function PATCH(request: Request, context: Context) {
   if (!updated) return NextResponse.json({ error: "Produk baru saja diubah pengguna lain. Muat ulang dan coba lagi." }, { status: 409 });
   return NextResponse.json({ ...updated, progress: Math.round(updated.completedCount / updated.targetCount * 100), status: updated.completedCount === updated.targetCount ? "COMPLETED" : updated.completedCount > 0 ? "IN_PROGRESS" : "NOT_STARTED" }, { headers: { "Cache-Control": "private, no-store" } });
 }
+
+export async function DELETE(_request: Request, context: Context) {
+  const { response, user } = await requireAdmin();
+  if (response) return response;
+  const { productId } = await context.params;
+  const existing = await db.productionProduct.findFirst({ where: { id: productId, account: { ownerId: null } } });
+  if (!existing) return NextResponse.json({ error: "Produk tidak ditemukan." }, { status: 404 });
+  if (existing.isArchived) return NextResponse.json({ error: "Produk sudah diarsipkan." }, { status: 409 });
+  const result = await db.$transaction(async tx => {
+    const changed = await tx.productionProduct.updateMany({ where: { id: productId, isArchived: false }, data: { isArchived: true } });
+    if (!changed.count) return false;
+    await tx.activityLog.create({ data: { accountId: existing.accountId, actorId: user!.id, action: ActivityAction.UPDATED, description: `Mengarsipkan produk ${existing.name}` } });
+    return true;
+  });
+  if (!result) return NextResponse.json({ error: "Produk baru saja diubah pengguna lain. Muat ulang dan coba lagi." }, { status: 409 });
+  return NextResponse.json({ archived: true }, { headers: { "Cache-Control": "private, no-store" } });
+}

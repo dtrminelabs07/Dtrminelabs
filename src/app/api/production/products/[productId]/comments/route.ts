@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireAdmin, requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { productionCommentSchema } from "@/lib/validators";
 
 type Context = { params: Promise<{ productId: string }> };
@@ -17,7 +17,7 @@ export async function GET(_request: Request, context: Context) {
 }
 
 export async function POST(request: Request, context: Context) {
-  const { response, user } = await requireAdmin();
+  const { response, user } = await requireUser();
   if (response) return response;
   const { productId } = await context.params;
   const parsed = productionCommentSchema.safeParse(await request.json().catch(() => null));
