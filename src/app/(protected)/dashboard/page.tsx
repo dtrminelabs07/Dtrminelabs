@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, ArrowRight, BarChart3, CalendarDays, CheckCircle2, Clock3, FileBarChart2, Settings, ShieldAlert, UploadCloud, UserRound, Users } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, CalendarDays, CheckCircle2, Clock3, FileBarChart2, Settings, ShieldAlert, UploadCloud, UserRound } from "lucide-react";
 import { dateKeyInTimezone, monthKeyInTimezone } from "@/lib/date";
 
 const statuses = ["COMPLETED", "PENDING", "UPLOADED", "LIMIT", "OUT_OF_STOCK", "HOLIDAY"] as const;
@@ -27,7 +27,6 @@ const modules = [
   { href: "/history", label: "Riwayat", description: "Telusuri perubahan status", icon: Clock3, tone: "purple" },
   { href: "/reports", label: "Laporan", description: "Analisis periode dan ekspor", icon: FileBarChart2, tone: "amber" },
   { href: "/accounts", label: "Akun", description: "Kelola akun target", icon: UserRound, tone: "cyan" },
-  { href: "/users", label: "Pengguna", description: "Kelola akses workspace", icon: Users, tone: "blue", admin: true },
   { href: "/settings", label: "Pengaturan", description: "Atur preferensi workspace", icon: Settings, tone: "purple", admin: true }
 ];
 

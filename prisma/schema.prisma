@@ -51,7 +51,8 @@ model Account {
   platform  String?
   core      String
   subCore   String?
-  legacyNotes String?        @map("notes")
+  internalNotes String?      @map("notes")
+  passwordEncrypted String?
   isActive  Boolean       @default(true)
   ownerId   String?
   createdAt DateTime      @default(now())

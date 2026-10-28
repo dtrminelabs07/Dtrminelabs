@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-location-assign-relative-destination -- This navigates to the CSV download endpoint. */
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, DatabaseBackup, Download, FileUp, LockKeyhole, Palette, SlidersHorizontal } from "lucide-react";
+import { ChevronRight, DatabaseBackup, Download, FileUp, Palette, SlidersHorizontal } from "lucide-react";
 import { parseCsv } from "@/lib/csv";
 import ThemeToggle from "@/components/theme-toggle";
 import { monthKeyInTimezone } from "@/lib/date";
@@ -86,7 +86,6 @@ export default function SettingsPage() {
     <div className="page-title-row"><div><h1 className="page-title">Pengaturan</h1><p className="page-subtitle">Atur preferensi dan data workspace.</p></div></div>
     <section className="settings-list panel" aria-label="Pilihan pengaturan">
       <div className="settings-row"><span className="settings-row-icon tone-blue"><Palette size={16} /></span><span className="settings-row-copy"><strong>Tampilan</strong><small>Atur tema dan preferensi tampilan.</small></span><ThemeToggle /></div>
-      <Link href="/users" className="settings-row"><span className="settings-row-icon tone-cyan"><LockKeyhole size={16} /></span><span className="settings-row-copy"><strong>Keamanan</strong><small>Kelola akses dan peran pengguna workspace.</small></span><ChevronRight size={17} className="settings-row-arrow" /></Link>
       <button type="button" className="settings-row" onClick={() => setShowBackup(value => !value)} aria-expanded={showBackup} aria-controls="settings-backup"><span className="settings-row-icon tone-green"><DatabaseBackup size={16} /></span><span className="settings-row-copy"><strong>Backup Data</strong><small>Impor data CSV atau ekspor tracker.</small></span><ChevronRight size={17} className={`settings-row-arrow${showBackup ? " open" : ""}`} /></button>
       <Link href="/reports" className="settings-row"><span className="settings-row-icon tone-purple"><SlidersHorizontal size={16} /></span><span className="settings-row-copy"><strong>Lainnya</strong><small>Lihat analitik dan laporan workspace.</small></span><ChevronRight size={17} className="settings-row-arrow" /></Link>
     </section>
