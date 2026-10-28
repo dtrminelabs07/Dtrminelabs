@@ -690,3 +690,15 @@ html[data-theme="light"] select option:checked{background-color:#1685ff;color:#f
 html[data-theme="light"] select option:hover,html[data-theme="light"] select option:focus{background-color:#dbeeff;color:#123c68}
 html[data-theme="light"] select:focus-visible{outline-color:#1685ff}
 html[data-theme="light"] .form-field select{background-color:#fff;color:#172b42;border-color:#cbd8e6}
+.matrix-footer-actions{display:flex;justify-content:flex-start;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.user-row-actions{display:flex;flex-wrap:wrap;gap:6px;min-width:190px}
+.role-pill{display:inline-flex;align-items:center;padding:4px 9px;border:1px solid var(--border);border-radius:999px;font-size:11px;font-weight:650}
+.role-admin{color:#91c6ff;background:#1685ff1a;border-color:#1685ff45}
+.role-staff{color:var(--text-soft);background:var(--surface-soft)}
+.user-state{white-space:nowrap}
+.user-state.is-inactive{color:var(--muted)}
+.user-password-field{position:relative;display:flex;align-items:center}
+.user-password-field input{width:100%;padding-right:44px}
+.user-password-field .password-toggle{position:absolute;right:8px;display:grid;place-items:center;width:30px;height:30px;border:0;background:transparent;color:var(--muted);cursor:pointer}
+.user-password-field .password-toggle:hover{color:var(--text)}
+@media(max-width:640px){.user-row-actions{min-width:0;flex-direction:column;align-items:stretch}.user-row-actions .btn{justify-content:center}}

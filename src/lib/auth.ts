@@ -24,9 +24,9 @@ export async function getSession(): Promise<SessionUser | null> {
     if (!token) return null;
     const { payload } = await jwtVerify(token, secret());
     if (typeof payload.id !== "string") return null;
-    const current = await db.user.findUnique({ where: { id: payload.id }, select: { id: true, email: true, name: true, username: true, role: true } });
-    if (!current) return null;
-    return current;
+    const current = await db.user.findUnique({ where: { id: payload.id }, select: { id: true, email: true, name: true, username: true, role: true, isActive: true } });
+    if (!current?.isActive) return null;
+    return { id: current.id, email: current.email, name: current.name, username: current.username, role: current.role };
   } catch { return null; }
 }
 export async function requireUser() {
@@ -42,7 +42,7 @@ export async function requireAdmin() {
 }
 export async function verifyCredentials(username: string, password: string) {
   const user = await db.user.findUnique({ where: { username: username.trim().toLowerCase() } });
-  if (!user) return null;
+  if (!user || !user.isActive) return null;
   const bcrypt = await import("bcryptjs");
   if (!(await bcrypt.compare(password, user.passwordHash))) return null;
   return { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role } as SessionUser;

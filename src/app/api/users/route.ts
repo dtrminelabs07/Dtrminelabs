@@ -3,5 +3,37 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
-export async function GET(){const {response}=await requireAdmin();if(response)return response;return NextResponse.json(await db.user.findMany({where:{role:{not:"DEMO"}},select:{id:true,name:true,username:true,email:true,role:true,createdAt:true},orderBy:{name:"asc"}}))}
-export async function POST(request:NextRequest){const {response}=await requireAdmin();if(response)return response;const schema=z.object({name:z.string().trim().min(1).max(120),username:z.string().trim().min(3).max(80).regex(/^[a-zA-Z0-9._-]+$/),email:z.string().email(),password:z.string().min(12).max(200),role:z.enum(["ADMIN","STAFF"])});const parsed=schema.safeParse(await request.json().catch(()=>null));if(!parsed.success)return NextResponse.json({error:"Periksa nama, username, email, dan kata sandi (minimal 12 karakter)."},{status:400});try{const user=await db.user.create({data:{...parsed.data,username:parsed.data.username.toLowerCase(),email:parsed.data.email.toLowerCase(),passwordHash:await bcrypt.hash(parsed.data.password,12)},select:{id:true,name:true,username:true,email:true,role:true,createdAt:true}});return NextResponse.json(user,{status:201})}catch{return NextResponse.json({error:"Username atau email sudah digunakan, atau data tidak dapat disimpan."},{status:409})}}
+const userSelect = { id: true, name: true, username: true, email: true, role: true, isActive: true, createdAt: true } as const;
+
+export async function GET() {
+  const { response } = await requireAdmin();
+  if (response) return response;
+  const users = await db.user.findMany({ where: { role: { not: "DEMO" } }, select: userSelect, orderBy: { name: "asc" } });
+  return NextResponse.json(users, { headers: { "Cache-Control": "private, no-store" } });
+}
+
+export async function POST(request: NextRequest) {
+  const { response } = await requireAdmin();
+  if (response) return response;
+  const schema = z.object({
+    name: z.string().trim().min(1).max(120),
+    username: z.string().trim().min(3).max(80).regex(/^[a-zA-Z0-9._-]+$/),
+    email: z.string().trim().email().max(254),
+    password: z.string().min(12).max(200),
+    role: z.enum(["ADMIN", "STAFF"]),
+    isActive: z.boolean().default(true),
+  }).strict();
+  const parsed = schema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Periksa nama, username, email, kata sandi minimal 12 karakter, peran, dan status." }, { status: 400 });
+
+  try {
+    const { password, ...fields } = parsed.data;
+    const user = await db.user.create({
+      data: { ...fields, username: fields.username.toLowerCase(), email: fields.email.toLowerCase(), passwordHash: await bcrypt.hash(password, 12) },
+      select: userSelect,
+    });
+    return NextResponse.json(user, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+  } catch {
+    return NextResponse.json({ error: "Username atau email sudah digunakan, atau data tidak dapat disimpan." }, { status: 409 });
+  }
+}

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, Search, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Download, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { monthKeyInTimezone } from "@/lib/date";
 
 type Account = {
@@ -32,7 +33,7 @@ function dayKey(year: number, month: number, day: number) {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-export default function TrackerMatrix({ onSaved }: { onSaved?: () => void } = {}) {
+export default function TrackerMatrix({ onSaved, isAdmin = false }: { onSaved?: () => void; isAdmin?: boolean } = {}) {
   const initialMonth = monthKeyInTimezone();
   const [view, setView] = useState<MonthView>(() => { const [year, month] = initialMonth.split("-").map(Number); return { year, month: month - 1 }; });
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -218,6 +219,7 @@ export default function TrackerMatrix({ onSaved }: { onSaved?: () => void } = {}
       </div>
 
       <div className="legend">{statuses.map(value => <span className="legend-item" key={value}><span className={`legend-dot status-${value.toLowerCase()}`} />{labels[value]}</span>)}<span className="legend-item"><span className="legend-dot matrix-empty-dot" />Belum dicatat</span></div>
+      {isAdmin && <div className="matrix-footer-actions"><Link className="btn btn-sm" href="/accounts?new=1"><Plus size={14}/>Tambah akun</Link></div>}
     </section>
 
     {selected && <div className="modal-backdrop" onClick={() => setSelected(null)}><section className="modal" onClick={event => event.stopPropagation()}>

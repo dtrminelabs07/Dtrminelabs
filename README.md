@@ -28,7 +28,7 @@ No public registration route is provided. Admins create staff accounts from **Pe
 ## Database and deployment
 
 - Prisma schema: `prisma/schema.prisma`
-- Migrations: initial schema, demo isolation, `prisma/migrations/202610280001_usernames` (adds a nullable unique username; existing rows remain intact until usernames are provisioned), and `prisma/migrations/202610280002_private_account_notes` (copies legacy account notes into the admin-only notes table without dropping the original column).
+- Migrations: initial schema, demo isolation, `prisma/migrations/202610280001_usernames` (adds a nullable unique username; existing rows remain intact until usernames are provisioned), `prisma/migrations/202610280002_private_account_notes` (copies legacy account notes into the admin-only notes table without dropping the original column), and `prisma/migrations/202610280003_user_active` (adds an active flag defaulting existing users to active).
 - Prisma 7 uses `prisma.config.ts` for migration connection settings and the generated TypeScript client at `src/generated/prisma`. Runtime queries use Prisma's PostgreSQL driver adapter (`@prisma/adapter-pg`).
 - Use Neon pooled `DATABASE_URL` at runtime and the unpooled/direct `DIRECT_URL` for migrations.
 - In Vercel, configure `DATABASE_URL`, `DIRECT_URL`, and `AUTH_SECRET` for Production and Preview as appropriate. Add initial admin variables only to a secure one-time seed environment. Do not publish demo credentials on the login page; run demo seeds only against isolated environments.
