@@ -9,7 +9,7 @@ export async function GET() {
   const accounts = await db.account.findMany({
     where: { ...accountOwnerScope(user!), isActive: true },
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
-    select: { id: true, name: true, username: true, isActive: true, productionProducts: { where: { isArchived: false }, select: { targetCount: true, completedCount: true } } }
+    select: { id: true, name: true, username: true, core: true, subCore: true, isActive: true, productionProducts: { where: { isArchived: false }, select: { targetCount: true, completedCount: true } } }
   });
   const accountRows = accounts.map(account => {
     const planned = account.productionProducts.reduce((total, product) => total + product.targetCount, 0);
@@ -17,7 +17,7 @@ export async function GET() {
     const doneProducts = account.productionProducts.filter(product => product.completedCount === product.targetCount).length;
     const inProgress = account.productionProducts.filter(product => product.completedCount > 0 && product.completedCount < product.targetCount).length;
     const notStarted = account.productionProducts.filter(product => product.completedCount === 0).length;
-    return { id: account.id, name: account.name, username: account.username, isActive: account.isActive, planned, completed, doneProducts, inProgress, notStarted, progress: planned ? Math.round(completed / planned * 100) : 0, productCount: account.productionProducts.length };
+    return { id: account.id, name: account.name, username: account.username, core: account.core, subCore: account.subCore, isActive: account.isActive, planned, completed, doneProducts, inProgress, notStarted, progress: planned ? Math.round(completed / planned * 100) : 0, productCount: account.productionProducts.length };
   });
   const totals = accountRows.reduce((result, account) => ({ accounts: result.accounts + 1, planned: result.planned + account.planned, completed: result.completed + account.completed, doneProducts: result.doneProducts + account.doneProducts, inProgress: result.inProgress + account.inProgress, notStarted: result.notStarted + account.notStarted }), { accounts: 0, planned: 0, completed: 0, doneProducts: 0, inProgress: 0, notStarted: 0 });
   return NextResponse.json({ accounts: accountRows, totals: { ...totals, progress: totals.planned ? Math.round(totals.completed / totals.planned * 100) : 0 } }, { headers: { "Cache-Control": "private, no-store" } });

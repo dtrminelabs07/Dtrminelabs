@@ -41,6 +41,7 @@ model User {
   activities   ActivityLog[]
   accountNotes AccountNote[]
   demoAccounts Account[]     @relation("DemoAccounts")
+  productionAccountComments ProductionAccountComment[] @relation("ProductionAccountCommentAuthor")
   productionProducts ProductionProduct[] @relation("ProductionProductCreator")
   productionComments ProductionComment[] @relation("ProductionCommentAuthor")
   productionProgressChanges ProductionProgressChange[] @relation("ProductionProgressActor")
@@ -63,6 +64,7 @@ model Account {
   uploads   DailyUpload[]
   activities ActivityLog[]
   privateNotes AccountNote[]
+  productionComments ProductionAccountComment[]
   productionProducts ProductionProduct[]
   owner     User?         @relation("DemoAccounts", fields: [ownerId], references: [id], onDelete: Restrict)
   @@index([isActive, core, subCore])
@@ -149,6 +151,18 @@ model ProductionComment {
   product   ProductionProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
   author    User?    @relation("ProductionCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
   @@index([productId, createdAt])
+  @@index([authorId])
+}
+
+model ProductionAccountComment {
+  id        String   @id @default(cuid())
+  accountId String
+  authorId  String?
+  content   String
+  createdAt DateTime @default(now())
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  author    User?    @relation("ProductionAccountCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  @@index([accountId, createdAt])
   @@index([authorId])
 }
 

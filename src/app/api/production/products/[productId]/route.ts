@@ -13,7 +13,7 @@ export async function GET(_request: Request, context: Context) {
   const product = await db.productionProduct.findFirst({
     where: { id: productId, account: { ownerId: user!.role === "DEMO" ? user!.id : null } },
     include: {
-      account: { select: { id: true, name: true, username: true, isActive: true } },
+      account: { select: { id: true, name: true, username: true, core: true, subCore: true, isActive: true } },
       comments: { orderBy: { createdAt: "desc" }, include: { author: { select: { id: true, name: true } } } },
       progressHistory: { orderBy: { createdAt: "desc" }, include: { actor: { select: { id: true, name: true } } } }
     }
