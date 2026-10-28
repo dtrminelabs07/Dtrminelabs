@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, ArrowRight, BarChart3, CalendarDays, CheckCircle2, Clock3, FileBarChart2, Settings, ShieldAlert, UploadCloud, UserRound } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, CalendarDays, CheckCircle2, Clock3, FileBarChart2, PackageCheck, Settings, ShieldAlert, UploadCloud, UserRound } from "lucide-react";
 import { dateKeyInTimezone, monthKeyInTimezone } from "@/lib/date";
 
 const statuses = ["COMPLETED", "PENDING", "UPLOADED", "LIMIT", "OUT_OF_STOCK", "HOLIDAY"] as const;
@@ -23,6 +23,7 @@ const monthDays = (month: string) => { const [year, value] = month.split("-").ma
 
 const modules = [
   { href: "/tracker", label: "Upload Tracker", description: "Perbarui status harian", icon: UploadCloud, tone: "blue" },
+  { href: "/production", label: "Production Dashboard", description: "Pantau progres produk", icon: PackageCheck, tone: "amber" },
   { href: "/calendar", label: "Kalender", description: "Lihat aktivitas per tanggal", icon: CalendarDays, tone: "green" },
   { href: "/history", label: "Riwayat", description: "Telusuri perubahan status", icon: Clock3, tone: "purple" },
   { href: "/reports", label: "Laporan", description: "Analisis periode dan ekspor", icon: FileBarChart2, tone: "amber" },

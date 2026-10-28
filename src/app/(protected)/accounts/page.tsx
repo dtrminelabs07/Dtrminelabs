@@ -27,6 +27,7 @@ export default function AccountsPage() {
   const [edit, setEdit] = useState<Account | null>(null);
   const [draft, setDraft] = useState<Draft>(empty);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
+  const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -90,9 +91,14 @@ export default function AccountsPage() {
   }
   async function toggle(account: Account) {
     if (!window.confirm(`${account.isActive ? "Nonaktifkan" : "Aktifkan"} akun ${account.name}? Riwayat tracker tetap disimpan.`)) return;
-    const response = await fetch(`/api/accounts/${account.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !account.isActive }) });
-    if (response.ok) { setToast(account.isActive ? "Akun dinonaktifkan" : "Akun diaktifkan"); await Promise.all([load(), loadAll()]); }
-    else setToast("Perubahan gagal disimpan");
+    setStatusBusyId(account.id);
+    try {
+      const response = await fetch(`/api/accounts/${account.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !account.isActive }) });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || "Perubahan status gagal disimpan.");
+      setToast(account.isActive ? "Akun dinonaktifkan" : "Akun diaktifkan"); await Promise.all([load(), loadAll()]);
+    } catch (error) { setToast(error instanceof Error ? error.message : "Perubahan status gagal disimpan."); }
+    finally { setStatusBusyId(null); window.setTimeout(() => setToast(""), 3500); }
   }
   async function viewDetails(account: Account) {
     setDetails(null); setNotes([]); setNoteDraft(""); setNoteError(""); setDetailBusy(true);
@@ -154,7 +160,7 @@ export default function AccountsPage() {
           <div className="account-card-tags"><span>{account.core}</span>{account.subCore && <span>{account.subCore}</span>}</div>
           <div className="account-card-foot"><span>{account.platform || "Platform belum diatur"}</span><small>Ditambahkan {dateLabel(account.createdAt)}</small></div>
         </button>
-        <div className="account-card-actions"><button className="btn btn-sm" onClick={() => void viewDetails(account)} title="Detail akun" aria-label={`Detail ${account.name}`}><Eye size={14} /></button><Link className="btn btn-sm" href={`/history?accountId=${account.id}`} title="Riwayat akun" aria-label={`Riwayat ${account.name}`}><History size={14} /></Link>{admin && <><button className="btn btn-sm" onClick={() => start(account)} aria-label={`Edit ${account.name}`}><Pencil size={13} />Edit</button><button className="btn btn-sm" onClick={() => void toggle(account)} title={account.isActive ? "Arsipkan" : "Aktifkan"} aria-label={account.isActive ? `Arsipkan ${account.name}` : `Aktifkan ${account.name}`}><Power size={13} /></button></>}</div>
+        <div className="account-card-actions"><button className="btn btn-sm" onClick={() => void viewDetails(account)} title="Detail akun" aria-label={`Detail ${account.name}`}><Eye size={14} /></button><Link className="btn btn-sm" href={`/history?accountId=${account.id}`} title="Riwayat akun" aria-label={`Riwayat ${account.name}`}><History size={14} /></Link>{admin && <><button className="btn btn-sm" onClick={() => start(account)} aria-label={`Edit ${account.name}`}><Pencil size={13} />Edit</button><button className="btn btn-sm" onClick={() => void toggle(account)} disabled={statusBusyId === account.id} title={account.isActive ? "Arsipkan" : "Aktifkan"} aria-label={account.isActive ? `Arsipkan ${account.name}` : `Aktifkan ${account.name}`}><Power size={13} />{statusBusyId === account.id ? "Menyimpan…" : account.isActive ? "Nonaktifkan" : "Aktifkan"}</button></>}</div>
       </article>)}</div>}
     </section>
     {modal && admin && <div className="modal-backdrop" onClick={() => setModal(false)}><form className="modal" onSubmit={submit} onClick={event => event.stopPropagation()}><div className="account-modal-heading"><div><h2 className="modal-title">{edit ? "Edit akun" : "Tambah akun"}</h2><p className="page-subtitle">Detail akun yang digunakan pada tracker.</p></div><button type="button" className="btn btn-sm" onClick={() => setModal(false)} aria-label="Tutup"><X size={14} /></button></div><div className="form-grid">{([ ["name", "Nama akun", true], ["username", "Username / identifier", false], ["avatarUrl", "URL foto profil", false], ["core", "Core", true], ["subCore", "Sub-core", false], ["platform", "Platform", false] ] as const).map(([key, label, required]) => <label className="form-field" key={key}>{label}<input required={required} type={key === "avatarUrl" ? "url" : "text"} value={draft[key]} onChange={event => setDraft({ ...draft, [key]: event.target.value })} /></label>)}<label className="form-field full">{edit ? "Password baru (kosongkan jika tidak ingin mengubah)" : "Password akun"}<span className="user-password-field"><input required={!edit} type={showAccountPassword ? "text" : "password"} autoComplete="new-password" maxLength={200} value={draft.password} onChange={event => setDraft({ ...draft, password: event.target.value })} /><button type="button" className="password-toggle" aria-label={showAccountPassword ? "Sembunyikan password" : "Tampilkan password"} aria-pressed={showAccountPassword} onClick={() => setShowAccountPassword(value => !value)}>{showAccountPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></span></label><label className="form-field full">Catatan internal<textarea rows={3} maxLength={4000} value={draft.internalNotes} onChange={event => setDraft({ ...draft, internalNotes: event.target.value })} placeholder="Catatan khusus admin tentang akun ini" /></label></div><div className="modal-actions"><button type="button" className="btn" onClick={() => setModal(false)}>Batal</button><button className="btn btn-primary" disabled={busy}>{busy ? "Menyimpan..." : "Simpan akun"}</button></div></form></div>}

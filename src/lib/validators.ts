@@ -6,3 +6,6 @@ export const accountCreateSchema = z.object({ ...accountFields, password: z.stri
 export const accountUpdateSchema = z.object({ ...accountFields, password: z.string().max(200).optional() }).partial();
 export const accountNoteSchema = z.object({ content: z.string().trim().min(1).max(4000) });
 export const trackerSchema = z.object({ accountId: z.string().min(1), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), status: statusSchema, notes: z.string().max(1000).optional().nullable() });
+export const productionProductCreateSchema = z.object({ accountId: z.string().min(1), requestKey: z.string().uuid(), name: z.string().trim().min(1).max(160), targetCount: z.number().int().positive().max(1_000_000) });
+export const productionProductUpdateSchema = z.object({ name: z.string().trim().min(1).max(160).optional(), targetCount: z.number().int().positive().max(1_000_000).optional(), completedCount: z.number().int().min(0).max(1_000_000).optional(), note: z.string().trim().max(2000).optional().nullable(), isArchived: z.boolean().optional() }).refine(value => Object.keys(value).length > 0, "Perubahan produk kosong.");
+export const productionCommentSchema = z.object({ content: z.string().trim().min(1).max(2000) });

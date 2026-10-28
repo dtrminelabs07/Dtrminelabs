@@ -41,6 +41,9 @@ model User {
   activities   ActivityLog[]
   accountNotes AccountNote[]
   demoAccounts Account[]     @relation("DemoAccounts")
+  productionProducts ProductionProduct[] @relation("ProductionProductCreator")
+  productionComments ProductionComment[] @relation("ProductionCommentAuthor")
+  productionProgressChanges ProductionProgressChange[] @relation("ProductionProgressActor")
 }
 
 model Account {
@@ -60,6 +63,7 @@ model Account {
   uploads   DailyUpload[]
   activities ActivityLog[]
   privateNotes AccountNote[]
+  productionProducts ProductionProduct[]
   owner     User?         @relation("DemoAccounts", fields: [ownerId], references: [id], onDelete: Restrict)
   @@index([isActive, core, subCore])
   @@index([ownerId, isActive, core, subCore])
@@ -113,5 +117,53 @@ model ActivityLog {
   actor         User            @relation(fields: [actorId], references: [id])
   @@index([createdAt])
   @@index([accountId, createdAt])
+}
+
+model ProductionProduct {
+  id             String   @id @default(cuid())
+  accountId      String
+  creationKey    String?
+  name           String
+  targetCount    Int
+  completedCount Int      @default(0)
+  isArchived     Boolean  @default(false)
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  account        Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  createdBy      User     @relation("ProductionProductCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  comments       ProductionComment[]
+  progressHistory ProductionProgressChange[]
+  @@index([accountId, isArchived, updatedAt])
+  @@index([createdAt])
+  @@unique([accountId, creationKey])
+}
+
+model ProductionComment {
+  id        String   @id @default(cuid())
+  productId String
+  authorId  String?
+  content   String
+  createdAt DateTime @default(now())
+  product   ProductionProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  author    User?    @relation("ProductionCommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  @@index([productId, createdAt])
+  @@index([authorId])
+}
+
+model ProductionProgressChange {
+  id                    String   @id @default(cuid())
+  productId             String
+  actorId               String
+  previousCompletedCount Int
+  newCompletedCount      Int
+  previousTargetCount    Int?
+  newTargetCount         Int?
+  note                   String?
+  createdAt              DateTime @default(now())
+  product                ProductionProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  actor                  User     @relation("ProductionProgressActor", fields: [actorId], references: [id], onDelete: Restrict)
+  @@index([productId, createdAt])
+  @@index([actorId])
 }
 
