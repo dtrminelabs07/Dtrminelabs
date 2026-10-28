@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   if (response) return response;
   const parsed = productionProductCreateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Nama produk dan target positif wajib diisi." }, { status: 400 });
-  const account = await db.account.findFirst({ where: { id: parsed.data.accountId, ...accountOwnerScope(user!), isActive: true }, select: { id: true } });
+  const account = await db.account.findFirst({ where: { id: parsed.data.accountId, ...accountOwnerScope(user!), isActive: true }, select: { id: true, core: true, subCore: true } });
   if (!account) return NextResponse.json({ error: "Akun aktif tidak ditemukan." }, { status: 404 });
   const { requestKey, ...fields } = parsed.data;
   const completedCount = fields.completedCount ?? 0;
@@ -37,7 +37,9 @@ export async function POST(request: Request) {
   const { product, isNew } = await db.$transaction(async tx => {
     const existingProduct = await tx.productionProduct.findUnique({ where: { accountId_creationKey: { accountId: productFields.accountId, creationKey: requestKey } } });
     if (existingProduct) return { product: existingProduct, isNew: false };
-    const created = await tx.productionProduct.create({ data: { ...productFields, completedCount, creationKey: requestKey, createdById: user!.id } });
+    let template = await tx.productTemplate.findFirst({ where: { name: productFields.name, core: account.core, subCore: account.subCore, description: productFields.description ?? null, isArchived: false } });
+    if (!template) template = await tx.productTemplate.create({ data: { name: productFields.name, description: productFields.description ?? null, core: account.core, subCore: account.subCore, defaultTarget: productFields.targetCount, createdById: user!.id } });
+    const created = await tx.productionProduct.create({ data: { ...productFields, templateId: template.id, completedCount, creationKey: requestKey, createdById: user!.id } });
     if (completedCount > 0 || initialNote?.trim()) {
       await tx.productionProgressChange.create({ data: { productId: created.id, actorId: user!.id, previousCompletedCount: 0, newCompletedCount: created.completedCount, note: initialNote?.trim() || null } });
     }

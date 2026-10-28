@@ -42,6 +42,7 @@ model User {
   accountNotes AccountNote[]
   demoAccounts Account[]     @relation("DemoAccounts")
   productionAccountComments ProductionAccountComment[] @relation("ProductionAccountCommentAuthor")
+  productTemplates ProductTemplate[] @relation("ProductTemplateCreator")
   productionProducts ProductionProduct[] @relation("ProductionProductCreator")
   productionComments ProductionComment[] @relation("ProductionCommentAuthor")
   productionProgressChanges ProductionProgressChange[] @relation("ProductionProgressActor")
@@ -124,6 +125,7 @@ model ActivityLog {
 model ProductionProduct {
   id             String   @id @default(cuid())
   accountId      String
+  templateId     String
   creationKey    String?
   name           String
   description    String?
@@ -134,12 +136,33 @@ model ProductionProduct {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   account        Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  template       ProductTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
   createdBy      User     @relation("ProductionProductCreator", fields: [createdById], references: [id], onDelete: Restrict)
   comments       ProductionComment[]
   progressHistory ProductionProgressChange[]
   @@index([accountId, isArchived, updatedAt])
   @@index([createdAt])
   @@unique([accountId, creationKey])
+  @@unique([accountId, templateId])
+  @@index([templateId])
+}
+
+model ProductTemplate {
+  id             String   @id @default(cuid())
+  creationKey    String?  @unique
+  name           String
+  core           String?
+  subCore        String?
+  description    String?
+  defaultTarget  Int?
+  isArchived     Boolean  @default(false)
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      User     @relation("ProductTemplateCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  assignments    ProductionProduct[]
+  @@index([isArchived, name])
+  @@index([core, subCore])
 }
 
 model ProductionComment {
