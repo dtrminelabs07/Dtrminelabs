@@ -359,12 +359,12 @@ html[data-theme="light"] .report-export-success{background:#e7f8f1;color:#087b58
 .view-toggle button{width:29px;height:26px;display:grid;place-items:center;border:0;border-radius:5px;background:transparent;color:var(--muted)}
 .view-toggle button.active{background:var(--raised);color:var(--blue);box-shadow:0 1px 3px #0002}
 .daily-table-wrap,.table-wrap{max-width:100%;overflow:auto}
-.daily-table{width:100%;min-width:760px;border-collapse:collapse}
+.daily-table{width:100%;min-width:0;border-collapse:collapse;table-layout:fixed}
 .daily-table th{position:sticky;top:0;z-index:2;padding:11px 13px;border-bottom:1px solid var(--border);background:var(--surface-soft);color:var(--muted);font-size:9px;font-weight:700;text-align:left;text-transform:uppercase;letter-spacing:.45px}
 .daily-table td{padding:9px 13px;border-bottom:1px solid color-mix(in srgb,var(--border) 75%,transparent);color:var(--text-soft);font-size:10px;vertical-align:middle}
-.daily-table tr:last-child td{border-bottom:0}
-.daily-table tbody tr:hover{background:color-mix(in srgb,var(--blue) 4%,transparent)}
-.daily-number{width:48px;color:var(--muted)!important;text-align:center!important}
+.daily-table thead tr th{display:flex;align-items:center}
+.daily-number{width:48px;color:var(--muted)!important;text-align:center!important;flex-shrink:0}
+.daily-actions-cell{display:flex;justify-content:flex-end;gap:8px;align-items:center;flex-shrink:0}
 .daily-account-name{color:var(--text);font-size:10px;font-weight:650}
 .daily-subcore{display:block;margin-top:4px;font-size:9px}
 .daily-notes{max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1016,26 +1016,52 @@ html[data-theme="light"] .account-card-actions{background:#f4f8fc}
 .production-modal-history-item p{margin:6px 0;font-size:12px}
 .production-modal-history-item small{color:var(--muted);font-size:11px}
 .production-create-modal .modal-actions{position:sticky;bottom:0;margin:14px 0 0;padding-top:13px;background:var(--surface);border-top:1px solid var(--border)}
+.production-account-modal {
+  /* Desktop: centered with proper top spacing and max height */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  width: min(1200px, 100vw - 48px);
+  overflow-y: auto;
+  border-radius: 16px;
+  padding: 24px;
+  z-index: 150;
+}
 @keyframes production-modal-in{from{opacity:0;transform:translateY(9px) scale(.992)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:850px){.production-modal-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.production-account-modal-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){
-  .production-layer{padding:9px}
-  .production-account-modal{width:min(1200px,calc(100vw - 18px));height:calc(100dvh - 18px);max-height:calc(100dvh - 18px);border-radius:13px}
-  .production-product-modal,.production-create-modal{width:100%;height:auto;max-height:calc(100dvh - 18px);border-radius:13px}
-  .production-modal-header{padding:16px 16px 13px;gap:10px}
-  .production-modal-header .modal-title{font-size:20px}
-  .production-modal-content{padding:15px 16px 20px}
-  .production-account-modal-summary{gap:12px;padding:14px}
-  .production-account-modal-summary>div>strong{font-size:18px}
-  .production-modal-product-grid{grid-template-columns:1fr}
-  .production-modal-product-card{padding:14px}
-  .production-comment-form{align-items:stretch;flex-direction:column}
-  .production-comment-form .btn{align-self:flex-end}
-  .production-comment>div{align-items:flex-start;flex-wrap:wrap}
-  .production-comment time{font-size:10px}
-  .production-modal-edit-grid{grid-template-columns:1fr}
-  .production-modal-edit-grid .production-edit-note{grid-column:auto}
-  .production-product-modal-status strong{font-size:25px}
+  .production-layer{
+    padding:9px;
+    inset: 0;
+    margin: 0;
+    border-radius: 13px;
+    width: calc(100vw - 32px);
+    max-width: none;
+  }
+  .production-account-modal{
+    width: calc(100vw - 32px);
+    max-height: calc(100dvh - 32px);
+    margin: 0;
+    border-radius: 13px;
+  }
+  .production-modal-header{
+    padding:16px 16px 13px;gap:10px
+  }
+  .production-modal-header .modal-title{
+    font-size:20px
+  }
+  .production-modal-content{
+    padding:15px 16px 20px
+  }
+  .production-account-modal-summary{
+    gap:12px;padding:14px
+  }
+  .production-account-modal-summary>div>strong{
+    font-size:18px
+  }
 }
 @media(prefers-reduced-motion:reduce){.production-modal-product-card,.production-account-modal,.production-product-modal,.production-create-modal{animation:none;transition:none}.production-modal-product-card:hover{transform:none}}
 
