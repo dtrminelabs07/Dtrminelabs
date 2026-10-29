@@ -19,13 +19,16 @@ export async function GET(request: NextRequest) {
   const rawStatus = params.get("status"); const parsedStatus = statusSchema.safeParse(rawStatus);
   if (rawStatus && !parsedStatus.success) return NextResponse.json({ error: "Filter status tidak valid." }, { status: 400 });
   const accountId = params.get("accountId") || undefined; const actorId = params.get("actorId") || undefined; const query = params.get("q")?.trim();
+  const accountScope = accountOwnerScope(user!);
   const where = {
-    account: accountOwnerScope(user!),
     ...(accountId ? { accountId } : {}),
     ...(actorId ? { actorId } : {}),
     ...(parsedStatus.success ? { newStatus: parsedStatus.data } : {}),
     ...(from || to ? { createdAt: { ...(from ? { gte: new Date(from + "T00:00:00.000Z") } : {}), ...(to ? { lt: new Date(new Date(to + "T00:00:00.000Z").getTime() + 86_400_000) } : {}) } } : {}),
-    ...(query ? { OR: [{ account: { name: { contains: query, mode: "insensitive" as const } } }, { actor: { name: { contains: query, mode: "insensitive" as const } } }, { description: { contains: query, mode: "insensitive" as const } }] } : {})
+    AND: [
+      user!.role === "ADMIN" ? { OR: [{ account: accountScope }, { accountId: null }] } : { account: accountScope },
+      ...(query ? [{ OR: [{ account: { name: { contains: query, mode: "insensitive" as const } } }, { accountName: { contains: query, mode: "insensitive" as const } }, { actor: { name: { contains: query, mode: "insensitive" as const } } }, { description: { contains: query, mode: "insensitive" as const } }] }] : [])
+    ]
   };
   const total = await db.activityLog.count({ where });
   if (total > 100_000) return NextResponse.json({ error: "Ekspor dibatasi 100.000 aktivitas. Persempit rentang atau gunakan filter." }, { status: 413 });
@@ -37,7 +40,7 @@ export async function GET(request: NextRequest) {
   const sheet = book.addWorksheet("Detail Riwayat", { views: [{ state: "frozen", ySplit: 1 }] });
   sheet.columns = [{ header: "Waktu perubahan", key: "createdAt", width: 23 }, { header: "Akun", key: "account", width: 28 }, { header: "Tanggal tracker", key: "affectedDate", width: 16 }, { header: "Status sebelumnya", key: "previous", width: 21 }, { header: "Status baru", key: "next", width: 21 }, { header: "Aktivitas", key: "description", width: 54 }, { header: "Pengguna", key: "actor", width: 24 }, { header: "Catatan tracker", key: "notes", width: 38 }];
   sheet.getRow(1).height = 25; sheet.getRow(1).eachCell(cell => { cell.font = { bold: true, color: { argb: "FFFFFFFF" } }; cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF10243D" } }; cell.alignment = { vertical: "middle" }; });
-  for (const row of rows) { const added = sheet.addRow({ createdAt: row.createdAt, account: row.account.name, affectedDate: row.dailyUpload?.date, previous: row.previousStatus ?? "—", next: row.newStatus ?? "—", description: row.description, actor: row.actor.name, notes: row.dailyUpload?.notes ?? "" }); added.getCell(1).numFmt = "dd mmm yyyy hh:mm"; }
+  for (const row of rows) { const added = sheet.addRow({ createdAt: row.createdAt, account: row.account?.name ?? row.accountName ?? "Akun dihapus", affectedDate: row.dailyUpload?.date, previous: row.previousStatus ?? "—", next: row.newStatus ?? "—", description: row.description, actor: row.actor.name, notes: row.dailyUpload?.notes ?? "" }); added.getCell(1).numFmt = "dd mmm yyyy hh:mm"; }
   sheet.autoFilter = { from: "A1", to: "H1" };
   for (const item of [summary, sheet]) item.eachRow(row => row.eachCell(cell => { cell.alignment = { ...cell.alignment, vertical: "middle", wrapText: true }; }));
   const buffer = await book.xlsx.writeBuffer();

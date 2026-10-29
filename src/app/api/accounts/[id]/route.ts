@@ -24,6 +24,35 @@ export async function PATCH(request: NextRequest, context: Ctx) {
   if (!result.count) return NextResponse.json({ error: "Akun tidak ditemukan." }, { status: 404 });
   return NextResponse.json(await db.account.findUnique({ where: { id }, select: { id: true, name: true, username: true, avatarUrl: true, platform: true, core: true, subCore: true, isActive: true, internalNotes: true, createdAt: true, updatedAt: true } }), { headers: { "Cache-Control": "private, no-store" } });
 }
+export async function DELETE(_request: NextRequest, context: Ctx) {
+  const { response } = await requireAdmin(); if (response) return response;
+  const { id } = await context.params;
+  try {
+    const deleted = await db.$transaction(async tx => {
+      const account = await tx.account.findFirst({
+        where: { id, ownerId: null },
+        select: { id: true, name: true, _count: { select: { uploads: true, privateNotes: true, productionComments: true, productionProducts: true } } }
+      });
+      if (!account) return { kind: "missing" as const };
+      const related = account._count;
+      if (related.uploads || related.privateNotes || related.productionComments || related.productionProducts) {
+        return { kind: "has-data" as const, related };
+      }
+      await tx.activityLog.updateMany({ where: { accountId: id }, data: { accountName: account.name } });
+      await tx.account.delete({ where: { id } });
+      return { kind: "deleted" as const };
+    });
+    if (deleted.kind === "missing") return NextResponse.json({ error: "Akun tidak ditemukan." }, { status: 404 });
+    if (deleted.kind === "has-data") return NextResponse.json({ error: "Akun masih memiliki data tracker, catatan, komentar, atau produk produksi. Nonaktifkan akun agar seluruh data tersebut tetap tersimpan." }, { status: 409 });
+    return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined;
+    if (code === "P2003" || code === "P2025") return NextResponse.json({ error: "Akun memiliki data terkait atau sudah berubah. Muat ulang daftar, lalu nonaktifkan akun jika datanya perlu dipertahankan." }, { status: 409 });
+    const errorType = error instanceof Error ? error.name : "UnknownError";
+    console.error("[accounts:delete] Account deletion failed", { errorType, ...(code ? { code } : {}) });
+    return NextResponse.json({ error: "Akun gagal dihapus. Coba lagi atau nonaktifkan akun agar datanya tetap tersimpan." }, { status: 500 });
+  }
+}
 export async function GET(_request: NextRequest, context: Ctx) {
   const { response, user } = await requireUser(); if (response) return response;
   const { id } = await context.params;

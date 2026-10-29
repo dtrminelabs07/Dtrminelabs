@@ -1102,3 +1102,5 @@ html[data-theme="light"] .production-comment time,html[data-theme="light"] .prod
 .daily-table th:nth-child(4),.daily-table td:nth-child(4){width:84px;min-width:84px;text-align:center}
 .daily-actions-cell .daily-row-action{width:40px;min-width:40px;min-height:40px;justify-content:center;padding:8px}
 @media(max-width:700px){.daily-table{max-width:none}.daily-table th:nth-child(3),.daily-table td:nth-child(3){width:35%}.daily-table th:nth-child(4),.daily-table td:nth-child(4){width:72px;min-width:72px}}
+
+.account-card-actions{flex-wrap:wrap}

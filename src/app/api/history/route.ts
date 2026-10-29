@@ -22,10 +22,12 @@ export async function GET(request: NextRequest) {
   const accountId = params.get("accountId") || undefined; const actorId = params.get("actorId") || undefined; const q = params.get("q")?.trim();
   const accountScope = accountOwnerScope(user!);
   const where = {
-    account: accountScope,
     ...(accountId ? { accountId } : {}), ...(actorId ? { actorId } : {}), ...(parsedStatus.success ? { newStatus: parsedStatus.data } : {}),
-    ...(q ? { OR: [{ account: { name: { contains: q, mode: "insensitive" as const } } }, { actor: { name: { contains: q, mode: "insensitive" as const } } }, { description: { contains: q, mode: "insensitive" as const } }] } : {}),
-    ...(from || to ? { createdAt: { ...(from ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}), ...(to ? { lt: new Date(new Date(`${to}T00:00:00.000Z`).getTime() + 86_400_000) } : {}) } } : {})
+    ...(from || to ? { createdAt: { ...(from ? { gte: new Date(`${from}T00:00:00.000Z`) } : {}), ...(to ? { lt: new Date(new Date(`${to}T00:00:00.000Z`).getTime() + 86_400_000) } : {}) } } : {}),
+    AND: [
+      user!.role === "ADMIN" ? { OR: [{ account: accountScope }, { accountId: null }] } : { account: accountScope },
+      ...(q ? [{ OR: [{ account: { name: { contains: q, mode: "insensitive" as const } } }, { accountName: { contains: q, mode: "insensitive" as const } }, { actor: { name: { contains: q, mode: "insensitive" as const } } }, { description: { contains: q, mode: "insensitive" as const } }] }] : [])
+    ]
   };
   const [items, total, accounts, users] = await Promise.all([
     db.activityLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (requestedPage - 1) * size, take: size, include: { account: { select: { name: true } }, actor: { select: { name: true } }, dailyUpload: { select: { date: true } } } }),

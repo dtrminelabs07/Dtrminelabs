@@ -28,6 +28,7 @@ export default function AccountsPage() {
   const [draft, setDraft] = useState<Draft>(empty);
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
+  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -117,6 +118,25 @@ export default function AccountsPage() {
     } catch (error) { setToast(error instanceof Error ? error.message : "Perubahan status gagal disimpan."); }
     finally { setStatusBusyId(null); window.setTimeout(() => setToast(""), 3500); }
   }
+  async function deleteAccount(account: Account) {
+    if (!window.confirm(`Hapus akun “${account.name}” secara permanen? Tindakan ini tidak dapat dibatalkan. Jika akun memiliki status tracker, catatan, komentar, atau produk produksi, penghapusan akan ditolak agar data tersebut tetap aman.`)) return;
+    setDeleteBusyId(account.id);
+    try {
+      const response = await fetch(`/api/accounts/${account.id}`, { method: "DELETE" });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || "Akun gagal dihapus.");
+      setRows(current => current.filter(row => row.id !== account.id));
+      setAllRows(current => current.filter(row => row.id !== account.id));
+      if (details?.id === account.id) setDetails(null);
+      setToast("Akun berhasil dihapus secara permanen.");
+      await Promise.all([load(), loadAll()]);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "Akun gagal dihapus.");
+    } finally {
+      setDeleteBusyId(null);
+      window.setTimeout(() => setToast(""), 4500);
+    }
+  }
   async function viewDetails(account: Account) {
     setDetails(null); setNotes([]); setNoteDraft(""); setNoteError(""); setDetailBusy(true);
     try {
@@ -177,7 +197,7 @@ export default function AccountsPage() {
           <div className="account-card-tags"><span>{account.core}</span>{account.subCore && <span>{account.subCore}</span>}</div>
           <div className="account-card-foot"><span>{account.platform || "Platform belum diatur"}</span><small>Ditambahkan {dateLabel(account.createdAt)}</small></div>
         </button>
-        <div className="account-card-actions"><button className="btn btn-sm" onClick={() => void viewDetails(account)} title="Detail akun" aria-label={`Detail ${account.name}`}><Eye size={14} /></button><Link className="btn btn-sm" href={`/history?accountId=${account.id}`} title="Riwayat akun" aria-label={`Riwayat ${account.name}`}><History size={14} /></Link>{admin && <><button className="btn btn-sm" onClick={() => start(account)} aria-label={`Edit ${account.name}`}><Pencil size={13} />Edit</button><button className="btn btn-sm" onClick={() => void toggle(account)} disabled={statusBusyId === account.id} title={account.isActive ? "Arsipkan" : "Aktifkan"} aria-label={account.isActive ? `Arsipkan ${account.name}` : `Aktifkan ${account.name}`}><Power size={13} />{statusBusyId === account.id ? "Menyimpan…" : account.isActive ? "Nonaktifkan" : "Aktifkan"}</button></>}</div>
+        <div className="account-card-actions"><button className="btn btn-sm" onClick={() => void viewDetails(account)} title="Detail akun" aria-label={`Detail ${account.name}`}><Eye size={14} /></button><Link className="btn btn-sm" href={`/history?accountId=${account.id}`} title="Riwayat akun" aria-label={`Riwayat ${account.name}`}><History size={14} /></Link>{admin && <><button className="btn btn-sm" onClick={() => start(account)} aria-label={`Edit ${account.name}`}><Pencil size={13} />Edit</button><button className="btn btn-sm" onClick={() => void toggle(account)} disabled={statusBusyId === account.id || deleteBusyId === account.id} title={account.isActive ? "Nonaktifkan" : "Aktifkan"} aria-label={account.isActive ? `Nonaktifkan ${account.name}` : `Aktifkan ${account.name}`}><Power size={13} />{statusBusyId === account.id ? "Menyimpan…" : account.isActive ? "Nonaktifkan" : "Aktifkan"}</button><button className="btn btn-sm danger-action" onClick={() => void deleteAccount(account)} disabled={deleteBusyId === account.id || statusBusyId === account.id} title="Hapus akun secara permanen" aria-label={`Hapus akun ${account.name}`}><Trash2 size={14} />{deleteBusyId === account.id ? "Menghapus…" : "Hapus"}</button></>}</div>
       </article>)}</div>}
     </section>
     {modal && admin && <div className="modal-backdrop" onClick={() => setModal(false)}><form role="dialog" aria-modal="true" aria-labelledby="account-form-title" className="modal" onSubmit={submit} onClick={event => event.stopPropagation()}><div className="account-modal-heading"><div><h2 id="account-form-title" className="modal-title">{edit ? "Edit akun" : "Tambah akun"}</h2><p className="page-subtitle">Detail akun yang digunakan pada tracker.</p></div><button type="button" className="btn btn-sm" onClick={() => setModal(false)} aria-label="Tutup"><X size={14} /></button></div><div className="form-grid"><label className="form-field full">Nama Akun<input required maxLength={120} autoFocus value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="Masukkan nama akun" /></label>{edit && <>{([ ["username", "Username / identifier", false], ["avatarUrl", "URL foto profil", false], ["core", "Core", true], ["subCore", "Sub-core", false], ["platform", "Platform", false] ] as const).map(([key, label, required]) => <label className="form-field" key={key}>{label}<input required={required} type={key === "avatarUrl" ? "url" : "text"} value={draft[key]} onChange={event => setDraft({ ...draft, [key]: event.target.value })} /></label>)}<label className="form-field full">Password baru (kosongkan jika tidak ingin mengubah)<span className="user-password-field"><input type={showAccountPassword ? "text" : "password"} autoComplete="new-password" maxLength={200} value={draft.password} onChange={event => setDraft({ ...draft, password: event.target.value })} /><button type="button" className="password-toggle" aria-label={showAccountPassword ? "Sembunyikan password" : "Tampilkan password"} aria-pressed={showAccountPassword} onClick={() => setShowAccountPassword(value => !value)}>{showAccountPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></span></label></>}<label className="form-field full">Catatan<textarea rows={3} maxLength={4000} value={draft.internalNotes} onChange={event => setDraft({ ...draft, internalNotes: event.target.value })} placeholder="Catatan opsional tentang akun ini" /></label></div><div className="modal-actions"><button type="button" className="btn" onClick={() => setModal(false)}>Batal</button><button className="btn btn-primary" disabled={busy}>{busy ? "Menyimpan..." : "Simpan akun"}</button></div></form></div>}

@@ -107,7 +107,8 @@ model DailyUpload {
 
 model ActivityLog {
   id            String          @id @default(cuid())
-  accountId     String
+  accountId     String?
+  accountName   String?
   dailyUploadId String?
   actorId       String
   action        ActivityAction
@@ -115,7 +116,7 @@ model ActivityLog {
   newStatus     UploadStatus?
   description   String
   createdAt     DateTime        @default(now())
-  account       Account         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  account       Account?        @relation(fields: [accountId], references: [id], onDelete: SetNull)
   dailyUpload   DailyUpload?    @relation(fields: [dailyUploadId], references: [id], onDelete: SetNull)
   actor         User            @relation(fields: [actorId], references: [id])
   @@index([createdAt])
