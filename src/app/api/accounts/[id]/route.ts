@@ -43,11 +43,28 @@ export async function DELETE(_request: NextRequest, context: Ctx) {
       return { kind: "deleted" as const };
     });
     if (deleted.kind === "missing") return NextResponse.json({ error: "Akun tidak ditemukan." }, { status: 404 });
-    if (deleted.kind === "has-data") return NextResponse.json({ error: "Akun masih memiliki data tracker, catatan, komentar, atau produk produksi. Nonaktifkan akun agar seluruh data tersebut tetap tersimpan." }, { status: 409 });
+    if (deleted.kind === "has-data") {
+      const details = [
+        deleted.related.uploads ? `${deleted.related.uploads} status tracker` : "",
+        deleted.related.privateNotes ? `${deleted.related.privateNotes} catatan privat` : "",
+        deleted.related.productionComments ? `${deleted.related.productionComments} komentar produksi` : "",
+        deleted.related.productionProducts ? `${deleted.related.productionProducts} produk produksi` : ""
+      ].filter(Boolean).join(", ");
+      return NextResponse.json({ error: `Akun tidak dapat dihapus karena masih memiliki ${details}. Nonaktifkan akun untuk mempertahankan datanya.` }, { status: 409 });
+    }
     return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined;
-    if (code === "P2003" || code === "P2025") return NextResponse.json({ error: "Akun memiliki data terkait atau sudah berubah. Muat ulang daftar, lalu nonaktifkan akun jika datanya perlu dipertahankan." }, { status: 409 });
+    if (code === "P2003") return NextResponse.json({ error: "Akun masih memiliki relasi data yang mencegah penghapusan. Nonaktifkan akun agar data terkait tetap tersimpan." }, { status: 409 });
+    if (code === "P2025") return NextResponse.json({ error: "Akun sudah tidak ditemukan. Muat ulang daftar akun." }, { status: 404 });
+    if (code === "P2022") {
+      console.error("[accounts:delete] Database schema is missing a required column; apply pending Prisma migrations.", { code });
+      return NextResponse.json({ error: "Skema database belum diperbarui untuk fitur ini. Terapkan migration Prisma terbaru, lalu coba lagi." }, { status: 503 });
+    }
+    if (code === "P1001" || code === "P1002" || (error instanceof Error && error.name === "PrismaClientInitializationError")) {
+      console.error("[accounts:delete] Database connection unavailable", { errorType: error instanceof Error ? error.name : "UnknownError", ...(code ? { code } : {}) });
+      return NextResponse.json({ error: "Database sedang tidak dapat dihubungi. Coba lagi beberapa saat." }, { status: 503 });
+    }
     const errorType = error instanceof Error ? error.name : "UnknownError";
     console.error("[accounts:delete] Account deletion failed", { errorType, ...(code ? { code } : {}) });
     return NextResponse.json({ error: "Akun gagal dihapus. Coba lagi atau nonaktifkan akun agar datanya tetap tersimpan." }, { status: 500 });

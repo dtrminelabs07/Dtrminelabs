@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff, History, Plus, Power, Search, UserRound, X, Pencil, Trash2, StickyNote } from "lucide-react";
 
 type Account = { id: string; name: string; username: string | null; avatarUrl: string | null; core: string; subCore: string | null; platform: string | null; internalNotes?: string | null; isActive: boolean; createdAt: string; updatedAt: string };
@@ -29,6 +29,7 @@ export default function AccountsPage() {
   const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
   const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
+  const deleteInFlight = useRef(new Set<string>());
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -119,7 +120,10 @@ export default function AccountsPage() {
     finally { setStatusBusyId(null); window.setTimeout(() => setToast(""), 3500); }
   }
   async function deleteAccount(account: Account) {
+    if (deleteInFlight.current.has(account.id)) return;
+    if (!admin) return setToast("Akses ditolak: hanya admin yang dapat menghapus akun.");
     if (!window.confirm(`Hapus akun “${account.name}” secara permanen? Tindakan ini tidak dapat dibatalkan. Jika akun memiliki status tracker, catatan, komentar, atau produk produksi, penghapusan akan ditolak agar data tersebut tetap aman.`)) return;
+    deleteInFlight.current.add(account.id);
     setDeleteBusyId(account.id);
     try {
       const response = await fetch(`/api/accounts/${account.id}`, { method: "DELETE" });
@@ -129,10 +133,11 @@ export default function AccountsPage() {
       setAllRows(current => current.filter(row => row.id !== account.id));
       if (details?.id === account.id) setDetails(null);
       setToast("Akun berhasil dihapus secara permanen.");
-      await Promise.all([load(), loadAll()]);
+      void Promise.allSettled([load(), loadAll()]);
     } catch (error) {
       setToast(error instanceof Error ? error.message : "Akun gagal dihapus.");
     } finally {
+      deleteInFlight.current.delete(account.id);
       setDeleteBusyId(null);
       window.setTimeout(() => setToast(""), 4500);
     }
