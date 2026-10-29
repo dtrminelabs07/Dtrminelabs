@@ -14,13 +14,13 @@ export async function GET() {
   const accountRows = accounts.map(account => {
     const planned = account.productionProducts.reduce((total, product) => total + product.targetCount, 0);
     const completed = account.productionProducts.reduce((total, product) => total + product.completedCount, 0);
-    const doneProducts = account.productionProducts.filter(product => product.completedCount === product.targetCount).length;
+    const doneProducts = account.productionProducts.filter(product => product.completedCount >= product.targetCount).length;
     const inProgress = account.productionProducts.filter(product => product.completedCount > 0 && product.completedCount < product.targetCount).length;
     const notStarted = account.productionProducts.filter(product => product.completedCount === 0).length;
-    return { id: account.id, name: account.name, username: account.username, core: account.core, subCore: account.subCore, isActive: account.isActive, planned, completed, doneProducts, inProgress, notStarted, progress: planned ? Math.round(completed / planned * 100) : 0, productCount: account.productionProducts.length };
+    return { id: account.id, name: account.name, username: account.username, core: account.core, subCore: account.subCore, isActive: account.isActive, planned, completed, doneProducts, inProgress, notStarted, progress: planned ? Math.min(100, Math.round(completed / planned * 100)) : 0, productCount: account.productionProducts.length };
   });
   const totals = accountRows.reduce((result, account) => ({ accounts: result.accounts + 1, planned: result.planned + account.planned, completed: result.completed + account.completed, doneProducts: result.doneProducts + account.doneProducts, inProgress: result.inProgress + account.inProgress, notStarted: result.notStarted + account.notStarted }), { accounts: 0, planned: 0, completed: 0, doneProducts: 0, inProgress: 0, notStarted: 0 });
-  return NextResponse.json({ accounts: accountRows, totals: { ...totals, progress: totals.planned ? Math.round(totals.completed / totals.planned * 100) : 0 } }, { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json({ accounts: accountRows, totals: { ...totals, progress: totals.planned ? Math.min(100, Math.round(totals.completed / totals.planned * 100)) : 0 } }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 export async function POST(request: Request) {
@@ -32,7 +32,6 @@ export async function POST(request: Request) {
   if (!account) return NextResponse.json({ error: "Akun aktif tidak ditemukan." }, { status: 404 });
   const { requestKey, ...fields } = parsed.data;
   const completedCount = fields.completedCount ?? 0;
-  if (completedCount > fields.targetCount) return NextResponse.json({ error: "Progres awal tidak boleh melebihi target." }, { status: 400 });
   const { initialNote, ...productFields } = fields;
   const { product, isNew } = await db.$transaction(async tx => {
     const existingProduct = await tx.productionProduct.findUnique({ where: { accountId_creationKey: { accountId: productFields.accountId, creationKey: requestKey } } });

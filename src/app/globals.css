@@ -926,7 +926,7 @@ html[data-theme="light"] .account-card-actions{background:#f4f8fc}
 .production-account-status-summary span{display:inline-flex;align-items:center;gap:7px}
 .production-account-status-summary b{margin-left:auto;color:var(--warning,#ffc83d);font-weight:600}
 .state-dot{width:8px;height:8px;border-radius:50%;background:#71839a}
-.state-dot.done{background:#10d6a0}.state-dot.progress{background:#1685ff}.state-dot.pending{background:#ffc83d}
+.state-dot.done{background:#10d6a0}.state-dot.progress{background:#ffc83d}.state-dot.pending{background:#ff5263}
 .production-table-wrap{border:1px solid var(--border);border-radius:11px;background:var(--surface)}
 .production-products-table{min-width:850px}
 .production-products-table th,.production-products-table td{font-size:13px;padding:14px 16px;vertical-align:middle}
@@ -1005,8 +1005,8 @@ html[data-theme="light"] .account-card-actions{background:#f4f8fc}
 .production-product-parent b{color:var(--text)}
 .production-modal-edit-form{margin-top:22px;padding-top:5px}
 .production-modal-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:12px 0}
-.production-modal-edit-grid .form-field{font-size:12px}
-.production-modal-edit-grid input,.production-modal-edit-grid textarea{width:100%;min-height:40px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--raised);color:var(--text);font:inherit;font-size:13px}
+.production-modal-edit-grid .form-field{font-size:14px}
+.production-modal-edit-grid input,.production-modal-edit-grid textarea{width:100%;min-height:44px;padding:10px 11px;border:1px solid var(--border);border-radius:8px;background:var(--raised);color:var(--text);font:inherit;font-size:14px}
 .production-modal-edit-grid textarea{resize:vertical}
 .production-modal-edit-grid .production-edit-note{grid-column:1/-1}
 .production-modal-history{margin-top:22px;border-top:1px solid var(--border);padding-top:15px}
@@ -1042,3 +1042,23 @@ html[data-theme="light"] .account-card-actions{background:#f4f8fc}
 /* Production global product catalog and assignment picker */
 .production-catalog{margin:18px 0;padding:18px}.production-catalog .production-list-heading{align-items:center}.production-catalog .global-search{width:min(280px,100%)}.production-catalog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:12px}.production-catalog-card{min-width:0;padding:15px;border:1px solid var(--border);border-radius:14px;background:var(--surface);display:flex;flex-direction:column;gap:9px}.production-catalog-card.is-archived{opacity:.72}.production-catalog-card>strong{font-size:15px}.production-catalog-card>small,.production-catalog-card>p{margin:0;color:var(--muted);font-size:12px}.production-catalog-card>p{min-height:34px}.production-catalog-foot,.production-catalog-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)}.production-catalog-actions{justify-content:flex-start;margin-top:3px}.production-modal-header-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.production-picker-search{display:flex;margin-bottom:14px}.production-picker-list{display:grid;gap:8px;max-height:min(52dvh,480px);overflow:auto}.production-picker-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}.production-picker-item.is-assigned{opacity:.65}.production-picker-item>label,.production-picker-item>div{display:flex;align-items:center;gap:10px;min-width:0}.production-picker-item>label>span{display:grid;gap:3px}.production-picker-item small,.production-picker-item>div{font-size:12px;color:var(--muted)}.production-picker-item input[type=checkbox]{width:17px;height:17px;accent-color:var(--blue)}.production-target-override{display:flex;align-items:center;gap:6px}.production-target-override input{width:100px}.picker-layer{z-index:140}.creation-layer{z-index:145}.product-layer{z-index:150}
 @media(max-width:700px){.production-catalog{padding:14px}.production-catalog .production-list-heading{align-items:stretch}.production-catalog .global-search{width:100%}.production-modal-header-actions{width:100%}.production-modal-header-actions .btn{flex:1}.production-picker-item{align-items:flex-start;flex-direction:column}.production-picker-item>div{width:100%;justify-content:space-between}.production-target-override{flex:1;justify-content:flex-end}.production-picker-item .production-target-override input{width:90px}}
+
+/* Production status palette: pending red, in progress amber, completed green. */
+.production-product-state.state-done{background:color-mix(in srgb,#10d6a0 17%,var(--surface));color:#45e2b2}
+.production-product-state.state-progress{background:color-mix(in srgb,#ffc83d 18%,var(--surface));color:#ffd66b}
+.production-product-state.state-pending{background:color-mix(in srgb,#ff5263 16%,var(--surface));color:#ff8792}
+.production-progress-track.status-done>i{background:#10b981}
+.production-progress-track.status-progress>i{background:#ffc83d}
+.production-progress-track.status-pending>i{background:#ff5263}
+.production-modal-product-card:focus-visible,.production-modal-product-card:focus,.production-product-modal button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.production-product-modal-status.status-done strong{color:#10d6a0}.production-product-modal-status.status-progress strong{color:#ffc83d}.production-product-modal-status.status-pending strong{color:#ff6b7a}
+.production-edit-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--raised)}.production-edit-status>b{font-size:16px;color:var(--text)}.production-edit-status>span:last-child{color:var(--muted);font-size:13px}.production-field-error{display:block;margin-top:5px;color:#ff8792;font-size:13px}
+.account-card-state{font-size:12px;font-weight:600}.account-card-state.is-active{color:#10d6a0}.account-card-state.is-inactive{color:#ff7180}.account-card-state .account-state-dot.is-inactive{background:#ff5263;box-shadow:0 0 0 3px #ff52631c}
+html[data-theme="light"] .production-product-state.state-done{background:#e5f8f1;color:#087b58}
+html[data-theme="light"] .production-product-state.state-progress{background:#fff4d0;color:#795700}
+html[data-theme="light"] .production-product-state.state-pending{background:#ffe8eb;color:#b42332}
+html[data-theme="light"] .production-edit-status{background:#f6f9fd}
+html[data-theme="light"] .production-field-error{color:#b42332}
+html[data-theme="light"] .account-card-state.is-inactive{color:#b42332}
+
+.production-modal input::placeholder,.production-modal textarea::placeholder,.production-modal-edit-grid input::placeholder,.production-modal-edit-grid textarea::placeholder{color:var(--muted);opacity:1}.production-modal input:focus-visible,.production-modal textarea:focus-visible,.production-modal button:focus-visible,.production-modal-edit-grid input:focus-visible,.production-modal-edit-grid textarea:focus-visible{outline:2px solid var(--blue);outline-offset:2px}.production-comment time,.production-modal-history-item small{font-size:13px;color:var(--muted)}

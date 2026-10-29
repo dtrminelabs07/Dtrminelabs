@@ -3,6 +3,7 @@ import { ActivityAction } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import { requireAdmin, requireUser } from "@/lib/auth";
 import { productionProductUpdateSchema } from "@/lib/validators";
+import { getProductionProgress, getProductionStatus } from "@/lib/production-status";
 
 type Context = { params: Promise<{ productId: string }> };
 
@@ -19,7 +20,7 @@ export async function GET(_request: Request, context: Context) {
     }
   });
   if (!product) return NextResponse.json({ error: "Produk tidak ditemukan." }, { status: 404 });
-  return NextResponse.json({ ...product, progress: Math.round(product.completedCount / product.targetCount * 100), status: product.completedCount === product.targetCount ? "COMPLETED" : product.completedCount > 0 ? "IN_PROGRESS" : "NOT_STARTED" }, { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json({ ...product, progress: getProductionProgress(product.completedCount, product.targetCount), status: getProductionStatus(product.completedCount, product.targetCount) === "done" ? "COMPLETED" : getProductionStatus(product.completedCount, product.targetCount) === "progress" ? "IN_PROGRESS" : "NOT_STARTED" }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 export async function PATCH(request: Request, context: Context) {
@@ -27,14 +28,13 @@ export async function PATCH(request: Request, context: Context) {
   if (response) return response;
   const { productId } = await context.params;
   const parsed = productionProductUpdateSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Perubahan produk tidak valid." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Perubahan produk tidak valid.", issues: parsed.error.flatten() }, { status: 400 });
   const existing = await db.productionProduct.findFirst({ where: { id: productId, account: { ownerId: null } } });
   if (!existing) return NextResponse.json({ error: "Produk tidak ditemukan." }, { status: 404 });
   const isRestore = parsed.data.isArchived === false && existing.isArchived;
   if (existing.isArchived && !isRestore) return NextResponse.json({ error: "Produk diarsipkan. Pulihkan produk sebelum mengubahnya." }, { status: 409 });
   const nextTarget = parsed.data.targetCount ?? existing.targetCount;
   const nextCompleted = parsed.data.completedCount ?? existing.completedCount;
-  if (nextCompleted > nextTarget) return NextResponse.json({ error: "Jumlah selesai tidak boleh melebihi target. Naikkan target terlebih dahulu." }, { status: 400 });
   if (nextCompleted < 0 || nextTarget < 1) return NextResponse.json({ error: "Target harus positif dan progres tidak boleh negatif." }, { status: 400 });
   const { note, ...fields } = parsed.data;
   const updated = await db.$transaction(async tx => {
@@ -49,7 +49,7 @@ export async function PATCH(request: Request, context: Context) {
     return tx.productionProduct.findUniqueOrThrow({ where: { id: productId } });
   });
   if (!updated) return NextResponse.json({ error: "Produk baru saja diubah pengguna lain. Muat ulang dan coba lagi." }, { status: 409 });
-  return NextResponse.json({ ...updated, progress: Math.round(updated.completedCount / updated.targetCount * 100), status: updated.completedCount === updated.targetCount ? "COMPLETED" : updated.completedCount > 0 ? "IN_PROGRESS" : "NOT_STARTED" }, { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json({ ...updated, progress: getProductionProgress(updated.completedCount, updated.targetCount), status: getProductionStatus(updated.completedCount, updated.targetCount) === "done" ? "COMPLETED" : getProductionStatus(updated.completedCount, updated.targetCount) === "progress" ? "IN_PROGRESS" : "NOT_STARTED" }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 export async function DELETE(_request: Request, context: Context) {
