@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { accountOwnerScope, requireAdmin, requireUser } from "@/lib/auth";
 import { accountCreateSchema } from "@/lib/validators";
-import { encryptAccountPassword } from "@/lib/account-credentials";
 import { ActivityAction } from "@/generated/prisma/enums";
 export async function GET(request: NextRequest) {
   const { response, user } = await requireUser(); if (response) return response;
@@ -17,17 +16,19 @@ export async function POST(request: NextRequest) {
   const { response, user } = await requireAdmin(); if (response) return response;
   const parsed = accountCreateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Periksa kembali data akun.", issues: parsed.error.flatten() }, { status: 400 });
-  const { password, internalNotes, ...fields } = parsed.data;
-  let passwordEncrypted: string;
+  const { name, internalNotes } = parsed.data;
   try {
-    passwordEncrypted = encryptAccountPassword(password);
-  } catch {
-    return NextResponse.json({ error: "Kredensial akun belum dapat disimpan. Periksa konfigurasi server." }, { status: 503 });
+    const account = await db.$transaction(async tx => {
+      const created = await tx.account.create({ data: { name, core: "Umum", isActive: true, internalNotes: internalNotes?.trim() || null }, select: { id: true, name: true, username: true, avatarUrl: true, platform: true, core: true, subCore: true, isActive: true, internalNotes: true, createdAt: true, updatedAt: true } });
+      await tx.activityLog.create({ data: { accountId: created.id, actorId: user!.id, action: ActivityAction.CREATED, description: `Menambahkan akun ${created.name}` } });
+      return created;
+    });
+    return NextResponse.json(account, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : undefined;
+    const errorType = error instanceof Error ? error.name : "UnknownError";
+    console.error("[accounts:create] Database write failed", { errorType, ...(code ? { code } : {}) });
+    const unavailable = errorType === "PrismaClientInitializationError" || code === "P1001" || code === "P1002";
+    return NextResponse.json({ error: unavailable ? "Database belum dapat dihubungi. Coba lagi beberapa saat." : "Akun gagal disimpan. Periksa koneksi database atau coba lagi." }, { status: unavailable ? 503 : 500 });
   }
-  const account = await db.$transaction(async tx => {
-    const created = await tx.account.create({ data: { ...fields, passwordEncrypted, internalNotes: internalNotes || null }, select: { id: true, name: true, username: true, avatarUrl: true, platform: true, core: true, subCore: true, isActive: true, internalNotes: true, createdAt: true, updatedAt: true } });
-    await tx.activityLog.create({ data: { accountId: created.id, actorId: user!.id, action: ActivityAction.CREATED, description: `Menambahkan akun ${created.name}` } });
-    return created;
-  });
-  return NextResponse.json(account, { status: 201, headers: { "Cache-Control": "private, no-store" } });
 }
