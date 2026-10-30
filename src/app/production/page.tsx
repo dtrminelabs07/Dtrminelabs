@@ -1,0 +1,3 @@
+{error && <div className=\"notice production-error\" role=\"alert\">{error}<button className=\"btn btn-sm\" onClick={() => void load()}>Coba lagi</button></div>}
+    {message && !accountOpen && <div className=\"notice production-notice\" role=\"status\">{message}<button className=\"production-notice-close\" onClick={() => setMessage(\"\")} aria-label=\"Tutup notifikasi\"><X size={14}/></button></div>}
+    <section className=\"production-accounts-section\">
