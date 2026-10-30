@@ -380,11 +380,11 @@ async function deleteCore(item: CatalogItem) {
               <span className="production-catalog-badge">Tersedia</span>
             </div>
             {admin && (
-              <div className="production-catalog-actions">
-                <button className="btn btn-sm" onClick={() => openTemplateForm("", item)}>Edit template</button>
-                {!item.isArchived && <button className="btn btn-sm" onClick={() => void archiveTemplate(item)}>Arsipkan</button>}
-              </div>
-            )}
+  <div className="production-catalog-actions">
+    <button className="btn btn-sm" onClick={() => openTemplateForm("", item)}>Edit</button>
+    <button className="btn btn-sm" onClick={() => void deleteCore(item)}>Hapus</button>
+  </div>
+)}
           </article>
         ))}
         {!catalog.length && <div className="production-empty">Katalog masih kosong. Buat template agar dapat digunakan pada akun.</div>}
