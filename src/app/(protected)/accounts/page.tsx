@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Eye, EyeOff, History, Plus, Power, Search, UserRound, X, Pencil, Trash2, StickyNote } from "lucide-react";
 
 type Account = { id: string; name: string; username: string | null; avatarUrl: string | null; core: string; subCore: string | null; platform: string | null; internalNotes?: string | null; isActive: boolean; createdAt: string; updatedAt: string };
@@ -41,6 +42,8 @@ export default function AccountsPage() {
   const [noteDraft, setNoteDraft] = useState("");
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteError, setNoteError] = useState("");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const cores = useMemo(() => Array.from(new Set(allRows.map(row => row.core))).sort(), [allRows]);
   const subCores = useMemo(() => Array.from(new Set(allRows.filter(row => !core || row.core === core).map(row => row.subCore).filter((value): value is string => Boolean(value)))).sort(), [allRows, core]);
   const displayRows = useMemo(() => [...rows].sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : sort === "updated" ? b.updatedAt.localeCompare(a.updatedAt) : a.core.localeCompare(b.core) || (a.subCore ?? "").localeCompare(b.subCore ?? "") || a.name.localeCompare(b.name)), [rows, sort]);
@@ -205,11 +208,181 @@ export default function AccountsPage() {
         <div className="account-card-actions"><button className="btn btn-sm" onClick={() => void viewDetails(account)} title="Detail akun" aria-label={`Detail ${account.name}`}><Eye size={14} /></button><Link className="btn btn-sm" href={`/history?accountId=${account.id}`} title="Riwayat akun" aria-label={`Riwayat ${account.name}`}><History size={14} /></Link>{admin && <><button className="btn btn-sm" onClick={() => start(account)} aria-label={`Edit ${account.name}`}><Pencil size={13} />Edit</button><button className="btn btn-sm" onClick={() => void toggle(account)} disabled={statusBusyId === account.id || deleteBusyId === account.id} title={account.isActive ? "Nonaktifkan" : "Aktifkan"} aria-label={account.isActive ? `Nonaktifkan ${account.name}` : `Aktifkan ${account.name}`}><Power size={13} />{statusBusyId === account.id ? "Menyimpan…" : account.isActive ? "Nonaktifkan" : "Aktifkan"}</button><button className="btn btn-sm danger-action" onClick={() => void deleteAccount(account)} disabled={deleteBusyId === account.id || statusBusyId === account.id} title="Hapus akun secara permanen" aria-label={`Hapus akun ${account.name}`}><Trash2 size={14} />{deleteBusyId === account.id ? "Menghapus…" : "Hapus"}</button></>}</div>
       </article>)}</div>}
     </section>
-    {modal && admin && <div className="modal-backdrop" onClick={() => setModal(false)}><form role="dialog" aria-modal="true" aria-labelledby="account-form-title" className="modal" onSubmit={submit} onClick={event => event.stopPropagation()}><div className="account-modal-heading"><div><h2 id="account-form-title" className="modal-title">{edit ? "Edit akun" : "Tambah akun"}</h2><p className="page-subtitle">Detail akun yang digunakan pada tracker.</p></div><button type="button" className="btn btn-sm" onClick={() => setModal(false)} aria-label="Tutup"><X size={14} /></button></div><div className="form-grid"><label className="form-field full">Nama Akun<input required maxLength={120} autoFocus value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="Masukkan nama akun" /></label>{edit && <>{([ ["username", "Username / identifier", false], ["avatarUrl", "URL foto profil", false], ["core", "Core", true], ["subCore", "Sub-core", false], ["platform", "Platform", false] ] as const).map(([key, label, required]) => <label className="form-field" key={key}>{label}<input required={required} type={key === "avatarUrl" ? "url" : "text"} value={draft[key]} onChange={event => setDraft({ ...draft, [key]: event.target.value })} /></label>)}<label className="form-field full">Password baru (kosongkan jika tidak ingin mengubah)<span className="user-password-field"><input type={showAccountPassword ? "text" : "password"} autoComplete="new-password" maxLength={200} value={draft.password} onChange={event => setDraft({ ...draft, password: event.target.value })} /><button type="button" className="password-toggle" aria-label={showAccountPassword ? "Sembunyikan password" : "Tampilkan password"} aria-pressed={showAccountPassword} onClick={() => setShowAccountPassword(value => !value)}>{showAccountPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></span></label></>}<label className="form-field full">Catatan<textarea rows={3} maxLength={4000} value={draft.internalNotes} onChange={event => setDraft({ ...draft, internalNotes: event.target.value })} placeholder="Catatan opsional tentang akun ini" /></label></div><div className="modal-actions"><button type="button" className="btn" onClick={() => setModal(false)}>Batal</button><button className="btn btn-primary" disabled={busy}>{busy ? "Menyimpan..." : "Simpan akun"}</button></div></form></div>}
-    {details && <div className="modal-backdrop" onClick={() => setDetails(null)}><section role="dialog" aria-modal="true" aria-labelledby="account-detail-title" className="modal account-detail-modal" onClick={event => event.stopPropagation()}><div className="account-modal-heading"><div><h2 id="account-detail-title" className="modal-title">{details.name}</h2><p className="page-subtitle">{details.username || "Tanpa username"} · {details.core}{details.subCore ? ` / ${details.subCore}` : ""}</p></div><button className="btn btn-sm" onClick={() => setDetails(null)} aria-label="Tutup detail"><X size={14} /></button></div>
-      <div className="notice account-info-note">{details.platform || "Platform tidak diisi"} · {details.isActive ? "Aktif" : "Belum Aktif"}<div>Dibuat {dateLabel(details.createdAt)} · Diperbarui {dateLabel(details.updatedAt)}</div></div>
-      {admin && <section className="private-notes-section"><div className="private-notes-title"><h3 className="panel-title"><StickyNote size={15} />Catatan privat</h3><span>Hanya admin</span></div><form className="private-note-form" onSubmit={saveNote}><textarea value={noteDraft} onChange={event => setNoteDraft(event.target.value)} maxLength={4000} placeholder={editingNote ? "Ubah isi catatan..." : "Tambahkan catatan internal tentang akun ini..."} aria-label="Isi catatan privat" required /><div className="private-note-form-foot"><small>{noteDraft.length}/4000</small><div>{editingNote && <button type="button" className="btn btn-sm" onClick={() => { setEditingNote(null); setNoteDraft(""); }}>Batal edit</button>}<button className="btn btn-primary btn-sm" disabled={notesBusy || !noteDraft.trim()}>{notesBusy ? "Menyimpan..." : editingNote ? "Simpan perubahan" : "Tambah catatan"}</button></div></div></form>{noteError && <p className="private-note-error" role="alert">{noteError}</p>}{notesBusy && !notes.length ? <p className="muted">Memuat catatan...</p> : notes.length ? <div className="private-note-list">{notes.map(note => <article className="private-note-card" key={note.id}><p>{note.content}</p><div className="private-note-meta"><span>{note.author?.name ?? "Pengguna dihapus"}<small>Dibuat {dateLabel(note.createdAt)}{note.updatedAt !== note.createdAt ? ` · Diperbarui ${dateLabel(note.updatedAt)}` : ""}</small></span><div><button type="button" className="btn btn-sm" onClick={() => editNote(note)} aria-label="Edit catatan"><Pencil size={13} /></button><button type="button" className="btn btn-sm danger-action" onClick={() => void deleteNote(note)} aria-label="Hapus catatan"><Trash2 size={13} /></button></div></div></article>)}</div> : <p className="muted">Belum ada catatan privat.</p>}</section>}
-      <h3 className="panel-title account-section-heading">Status terbaru</h3>{details.uploads.length ? <div className="table-wrap"><table className="data-table"><thead><tr><th>Tanggal</th><th>Status</th><th>Catatan tracker</th></tr></thead><tbody>{details.uploads.slice(0, 8).map(upload => <tr key={upload.id}><td>{String(upload.date).slice(0, 10)}</td><td>{statusLabels[upload.status] ?? upload.status}</td><td>{upload.notes || "—"}</td></tr>)}</tbody></table></div> : <p className="muted">Belum ada status tracker.</p>}<h3 className="panel-title account-section-heading">Aktivitas terbaru</h3>{details.activities.length ? <div className="activity-list">{details.activities.slice(0, 6).map(item => <div className="activity-row" key={item.id}><div className="activity-copy"><strong>{item.actor.name}</strong> · {item.description}<div className="activity-time">{new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.createdAt))}</div></div></div>)}</div> : <p className="muted">Belum ada aktivitas.</p>}</section></div>}
+    {modal && admin && mounted && createPortal(
+      <div className="modal-backdrop" onClick={() => setModal(false)}>
+        <form role="dialog" aria-modal="true" aria-labelledby="account-form-title" className="modal account-edit-dialog" onSubmit={submit} onClick={event => event.stopPropagation()}>
+          <div className="account-modal-heading">
+            <div>
+              <h2 id="account-form-title" className="modal-title">{edit ? "Edit akun" : "Tambah akun"}</h2>
+              <p className="page-subtitle">Detail akun yang digunakan pada tracker.</p>
+            </div>
+            <button type="button" className="btn btn-sm" onClick={() => setModal(false)} aria-label="Tutup"><X size={15} /></button>
+          </div>
+          <div className="form-grid">
+            <label className="form-field full">
+              Nama Akun
+              <input required maxLength={120} autoFocus value={draft.name} onChange={event => setDraft({ ...draft, name: event.target.value })} placeholder="Masukkan nama akun" />
+            </label>
+            {edit && (
+              <>
+                {([ ["username", "Username / identifier", false], ["avatarUrl", "URL foto profil", false], ["core", "Core", true], ["subCore", "Sub-core", false], ["platform", "Platform", false] ] as const).map(([key, label, required]) => (
+                  <label className="form-field" key={key}>
+                    {label}
+                    <input required={required} type={key === "avatarUrl" ? "url" : "text"} value={draft[key]} onChange={event => setDraft({ ...draft, [key]: event.target.value })} />
+                  </label>
+                ))}
+                <label className="form-field full">
+                  Password baru (kosongkan jika tidak ingin mengubah)
+                  <span className="user-password-field">
+                    <input type={showAccountPassword ? "text" : "password"} autoComplete="new-password" maxLength={200} value={draft.password} onChange={event => setDraft({ ...draft, password: event.target.value })} />
+                    <button type="button" className="password-toggle" aria-label={showAccountPassword ? "Sembunyikan password" : "Tampilkan password"} aria-pressed={showAccountPassword} onClick={() => setShowAccountPassword(value => !value)}>
+                      {showAccountPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </span>
+                </label>
+              </>
+            )}
+            <label className="form-field full">
+              Catatan
+              <textarea rows={3} maxLength={4000} value={draft.internalNotes} onChange={event => setDraft({ ...draft, internalNotes: event.target.value })} placeholder="Catatan opsional tentang akun ini" />
+            </label>
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn" onClick={() => setModal(false)}>Batal</button>
+            <button className="btn btn-primary" disabled={busy}>{busy ? "Menyimpan..." : "Simpan akun"}</button>
+          </div>
+        </form>
+      </div>,
+      document.body
+    )}
+
+    {details && mounted && createPortal(
+      <div className="modal-backdrop account-modal-backdrop" onClick={() => setDetails(null)}>
+        <section role="dialog" aria-modal="true" aria-labelledby="account-detail-title" className="modal account-detail-modal" onClick={event => event.stopPropagation()}>
+          <div className="account-modal-heading">
+            <div>
+              <h2 id="account-detail-title" className="modal-title">{details.name}</h2>
+              <p className="page-subtitle">{details.username ? (details.username.startsWith("@") ? details.username : `@${details.username}`) : "Tanpa username"} · {details.core}{details.subCore ? ` / ${details.subCore}` : ""}</p>
+            </div>
+            <button className="btn btn-sm" onClick={() => setDetails(null)} aria-label="Tutup detail"><X size={16} /></button>
+          </div>
+
+          <div className="account-modal-top-bar">
+            <span className="status-pill status-uploaded">
+              {details.platform || "Platform umum"} · {details.isActive ? "Aktif" : "Belum Aktif"}
+            </span>
+            <span className="account-modal-dates">
+              Dibuat {dateLabel(details.createdAt)} · Diperbarui {dateLabel(details.updatedAt)}
+            </span>
+          </div>
+
+          <div className="account-modal-body">
+            <div className="account-modal-left">
+              {admin && (
+                <section className="private-notes-section">
+                  <div className="private-notes-title">
+                    <h3 className="panel-title"><StickyNote size={15} />Catatan privat</h3>
+                    <span className="badge-admin">Hanya admin</span>
+                  </div>
+                  <form className="private-note-form" onSubmit={saveNote}>
+                    <textarea
+                      value={noteDraft}
+                      onChange={event => setNoteDraft(event.target.value)}
+                      maxLength={4000}
+                      placeholder={editingNote ? "Ubah isi catatan..." : "Tambahkan catatan internal tentang akun ini..."}
+                      aria-label="Isi catatan privat"
+                      required
+                    />
+                    <div className="private-note-form-foot">
+                      <small>{noteDraft.length}/4000</small>
+                      <div>
+                        {editingNote && <button type="button" className="btn btn-sm" onClick={() => { setEditingNote(null); setNoteDraft(""); }}>Batal edit</button>}
+                        <button className="btn btn-primary btn-sm" disabled={notesBusy || !noteDraft.trim()}>
+                          {notesBusy ? "Menyimpan..." : editingNote ? "Simpan perubahan" : "Tambah catatan"}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                  {noteError && <p className="private-note-error" role="alert">{noteError}</p>}
+                  {notesBusy && !notes.length ? <p className="muted">Memuat catatan...</p> : notes.length ? (
+                    <div className="private-note-list">
+                      {notes.map(note => (
+                        <article className="private-note-card" key={note.id}>
+                          <p>{note.content}</p>
+                          <div className="private-note-meta">
+                            <span>{note.author?.name ?? "Pengguna"}<small>Dibuat {dateLabel(note.createdAt)}{note.updatedAt !== note.createdAt ? ` · Diperbarui ${dateLabel(note.updatedAt)}` : ""}</small></span>
+                            <div>
+                              <button type="button" className="btn btn-sm" onClick={() => editNote(note)} aria-label="Edit catatan"><Pencil size={13} /></button>
+                              <button type="button" className="btn btn-sm danger-action" onClick={() => void deleteNote(note)} aria-label="Hapus catatan"><Trash2 size={13} /></button>
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : <p className="muted">Belum ada catatan privat.</p>}
+                </section>
+              )}
+
+              <section className="account-recent-status-section">
+                <h3 className="panel-title account-section-heading">Status terbaru</h3>
+                {details.uploads.length ? (
+                  <div className="table-wrap">
+                    <table className="data-table account-status-table">
+                      <thead>
+                        <tr>
+                          <th>TANGGAL</th>
+                          <th>STATUS</th>
+                          <th>CATATAN TRACKER</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {details.uploads.slice(0, 8).map(upload => (
+                          <tr key={upload.id}>
+                            <td>{String(upload.date).slice(0, 10)}</td>
+                            <td>
+                              <span className={"status-pill status-" + upload.status.toLowerCase()}>
+                                {statusLabels[upload.status] ?? upload.status}
+                              </span>
+                            </td>
+                            <td>{upload.notes || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : <p className="muted">Belum ada status tracker.</p>}
+              </section>
+            </div>
+
+            <div className="account-modal-right">
+              <section className="account-recent-activity-section">
+                <h3 className="panel-title account-section-heading">Aktivitas terbaru</h3>
+                {details.activities.length ? (
+                  <div className="activity-list">
+                    {details.activities.slice(0, 8).map(item => (
+                      <div className="activity-row" key={item.id}>
+                        <div className="activity-icon">
+                          <UserRound size={14} />
+                        </div>
+                        <div className="activity-copy">
+                          <strong>{item.actor.name}</strong> · {item.description}
+                          <div className="activity-time">
+                            {new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(item.createdAt))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : <p className="muted">Belum ada aktivitas.</p>}
+              </section>
+            </div>
+          </div>
+        </section>
+      </div>,
+      document.body
+    )}
+
+
     {detailBusy && !details && <div className="toast" role="status">Memuat detail akun...</div>}{toast && <div className="toast" role="status">{toast}</div>}
   </main>;
 }

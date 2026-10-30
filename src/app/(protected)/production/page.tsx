@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Activity, ArrowRight, Archive, Box, CheckCircle2, Clock3, MessageSquareText, PackagePlus, Plus, Search, Send, UserRound, X } from "lucide-react";
+import { Activity, ArrowRight, Archive, Box, Calendar, CheckCircle2, ChevronDown, Clock3, Layers, MessageSquareText, PackagePlus, Plus, Search, Send, UserRound, X } from "lucide-react";
+import Link from "next/link";
 import { getProductionProgress, getProductionStatus, getProductionStatusLabel } from "@/lib/production-status";
 
 type AccountRow = { id: string; name: string; username: string | null; core: string; subCore: string | null; isActive: boolean; planned: number; completed: number; doneProducts: number; inProgress: number; notStarted: number; progress: number; productCount: number };
@@ -174,21 +175,211 @@ export default function ProductionDashboardPage() {
   const currentProductProgress = product ? progressPercent(product.completedCount, product.targetCount) : 0;
   const currentProductState = product ? productState(product.completedCount, product.targetCount) : "pending";
 
+  const totalAccounts = data.totals.accounts || data.accounts.length;
+  const completedAccounts = data.accounts.filter(a => a.progress === 100 && a.productCount > 0).length;
+  const inProgressAccounts = data.accounts.filter(a => a.progress > 0 && a.progress < 100).length;
+  const notStartedAccounts = data.accounts.filter(a => a.progress === 0 && a.productCount > 0).length;
+  const noProductAccounts = data.accounts.filter(a => a.productCount === 0).length;
+
+  const completedPct = totalAccounts ? Math.round((completedAccounts / totalAccounts) * 100) : 0;
+  const inProgressPct = totalAccounts ? Math.round((inProgressAccounts / totalAccounts) * 100) : 0;
+  const notStartedPct = totalAccounts ? Math.round((notStartedAccounts / totalAccounts) * 100) : 0;
+  const noProductPct = totalAccounts ? Math.round((noProductAccounts / totalAccounts) * 100) : 0;
+
+  const todayLabel = new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
+  const currentMonthLabel = new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(new Date());
+
   return <main className="page production-page">
-    <div className="page-title-row"><div><div className="production-eyebrow"><Activity size={14}/>WORKSPACE PRODUKSI</div><h1 className="page-title">Production Dashboard</h1><p className="page-subtitle">Pantau target, progres, dan kendala produksi untuk setiap akun aktif.</p></div>{admin && <button className="btn btn-primary" onClick={() => openTemplateForm()}><Plus size={15}/>Tambah Produk Baru</button>}</div>
+    <div className="page-title-row">
+      <div>
+        <h1 className="page-title">Production</h1>
+        <p className="page-subtitle">Pantau progres produksi dan kelola akun produksi.</p>
+      </div>
+    </div>
     {error && <div className="notice production-error" role="alert">{error}<button className="btn btn-sm" onClick={() => void load()}>Coba lagi</button></div>}
     {message && !accountOpen && <div className="notice production-notice" role="status">{message}<button className="production-notice-close" onClick={() => setMessage("")} aria-label="Tutup notifikasi"><X size={14}/></button></div>}
-    <section className="production-kpis" aria-label="Ringkasan produksi">
-      <article className="production-kpi"><span><UserRound size={15}/>Akun aktif</span><strong>{busy ? "—" : data.totals.accounts}</strong><small>termasuk akun tanpa produk</small></article>
-      <article className="production-kpi"><span><Box size={15}/>Target unit</span><strong>{busy ? "—" : data.totals.planned.toLocaleString("id-ID")}</strong><small>jumlah unit direncanakan</small></article>
-      <article className="production-kpi tone-green"><span><CheckCircle2 size={15}/>Produk selesai</span><strong>{busy ? "—" : data.totals.doneProducts}</strong><small>{busy ? "Memuat" : `${data.totals.completed.toLocaleString("id-ID")} unit selesai`}</small></article>
-      <article className="production-kpi tone-amber"><span><Clock3 size={15}/>Dalam proses</span><strong>{busy ? "—" : data.totals.inProgress}</strong><small>{busy ? "Memuat" : `${data.totals.notStarted} belum dimulai`}</small></article>
+
+    {/* 1. Overall Progress / Progres Keseluruhan */}
+    <section className="panel production-overview-panel" aria-label="Progres keseluruhan">
+      <div className="production-overview-top">
+        <div className="production-overview-title-wrap">
+          <h2 className="panel-title">Progres Keseluruhan</h2>
+          <span className="production-update-badge">Update terakhir: {todayLabel}</span>
+        </div>
+        <div className="production-month-select">
+          <span>{currentMonthLabel}</span>
+          <ChevronDown size={14} />
+        </div>
+      </div>
+
+      <div className="production-metrics-cards">
+        <article className="prod-stat-card tone-total">
+          <span className="prod-stat-label">Total Akun</span>
+          <strong className="prod-stat-num">{busy ? "—" : totalAccounts}</strong>
+          <div className="prod-stat-bar"><i style={{ width: "100%" }} /></div>
+          <small className="prod-stat-sub">100%</small>
+        </article>
+
+        <article className="prod-stat-card tone-completed">
+          <span className="prod-stat-label">Selesai</span>
+          <strong className="prod-stat-num">{busy ? "—" : completedAccounts}</strong>
+          <div className="prod-stat-bar"><i style={{ width: `${completedPct}%` }} /></div>
+          <small className="prod-stat-sub">{completedPct}%</small>
+        </article>
+
+        <article className="prod-stat-card tone-pending">
+          <span className="prod-stat-label">Belum Dikerjakan</span>
+          <strong className="prod-stat-num">{busy ? "—" : notStartedAccounts}</strong>
+          <div className="prod-stat-bar"><i style={{ width: `${notStartedPct}%` }} /></div>
+          <small className="prod-stat-sub">{notStartedPct}%</small>
+        </article>
+
+        <article className="prod-stat-card tone-limit">
+          <span className="prod-stat-label">Limit / Proses</span>
+          <strong className="prod-stat-num">{busy ? "—" : inProgressAccounts}</strong>
+          <div className="prod-stat-bar"><i style={{ width: `${inProgressPct}%` }} /></div>
+          <small className="prod-stat-sub">{inProgressPct}%</small>
+        </article>
+
+        <article className="prod-stat-card tone-unrecorded">
+          <span className="prod-stat-label">Tanpa Status</span>
+          <strong className="prod-stat-num">{busy ? "—" : noProductAccounts}</strong>
+          <div className="prod-stat-bar"><i style={{ width: `${noProductPct}%` }} /></div>
+          <small className="prod-stat-sub">{noProductPct}%</small>
+        </article>
+      </div>
+
+      <div className="production-overview-bottom">
+        <div className="production-progress-meta">
+          <span>Target keseluruhan: <strong>{data.totals.planned.toLocaleString("id-ID")} unit</strong> ({data.totals.completed.toLocaleString("id-ID")} selesai)</span>
+          <span className="production-progress-pct">{busy ? "—" : `${data.totals.progress}%`}</span>
+        </div>
+        <div className="production-progress-track">
+          <i style={{ width: `${busy ? 0 : data.totals.progress}%` }} />
+        </div>
+        <div className="production-overview-foot">
+          <span>{busy ? "Memuat data produksi…" : `${data.totals.completed.toLocaleString("id-ID")} dari ${data.totals.planned.toLocaleString("id-ID")} unit selesai`}</span>
+          <span>{data.totals.doneProducts} produk selesai · {data.totals.inProgress} dalam proses · {data.totals.notStarted} belum dimulai</span>
+        </div>
+      </div>
     </section>
-    <section className="production-accounts-section"><div className="production-list-heading"><div><h2>Akun aktif</h2><p>Semua akun aktif tampil, termasuk akun yang belum memiliki produk.</p></div><div className="production-filters"><label className="global-search"><Search size={14}/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Cari nama atau username…" aria-label="Cari akun produksi"/></label></div></div>
-      {busy && !data.accounts.length ? <div className="production-empty">Memuat akun produksi…</div> : visibleAccounts.length ? <div className="production-account-grid">{visibleAccounts.map(accountRow => <button type="button" key={accountRow.id} onClick={() => openAccount(accountRow.id)} className="production-account-card production-account-card-button" aria-haspopup="dialog"><div className="production-account-top"><span className="production-account-icon"><UserRound size={17}/></span><span className="production-state active">Aktif</span></div><strong className="production-account-name">{accountRow.name}</strong><small className="production-account-username">{accountRow.username || "Identifier belum diatur"}</small><small className="production-account-username">{accountRow.core}{accountRow.subCore ? ` / ${accountRow.subCore}` : ""}</small><div className="production-account-progress"><span>Progres produksi</span><b>{accountRow.progress}%</b></div><div className="production-progress-track compact"><i style={{ width: `${accountRow.progress}%` }}/></div><div className="production-account-metrics"><span>{accountRow.productCount} produk <small>· {accountRow.planned.toLocaleString("id-ID")} unit target</small></span><span>{accountRow.doneProducts} selesai · {accountRow.inProgress} proses</span></div>{accountRow.productCount === 0 && <span className="production-no-products">Belum ada produk</span>}<span className="production-account-open">Lihat detail <ArrowRight size={14}/></span></button>)}</div> : <div className="production-empty"><UserRound size={20}/><strong>{data.accounts.length ? "Akun tidak ditemukan" : "Belum ada akun aktif"}</strong><span>{data.accounts.length ? "Ubah kata pencarian." : "Tambahkan atau aktifkan akun di halaman Akun untuk memulai produksi."}</span></div>}
+
+    {/* 2. Active Accounts */}
+    <section className="production-accounts-section">
+      <div className="production-list-heading">
+        <div>
+          <h2>Active Accounts</h2>
+          <p>Daftar akun yang sedang aktif dalam proses produksi.</p>
+        </div>
+        <div className="production-heading-actions">
+          <div className="production-filters">
+            <label className="global-search">
+              <Search size={14}/>
+              <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Cari nama atau username…" aria-label="Cari akun produksi"/>
+            </label>
+          </div>
+          {admin && (
+            <Link href="/accounts?new=1" className="btn btn-primary btn-sm">
+              <Plus size={14}/>Tambah akun
+            </Link>
+          )}
+        </div>
+      </div>
+      {busy && !data.accounts.length ? (
+        <div className="production-empty">Memuat akun produksi…</div>
+      ) : visibleAccounts.length ? (
+        <div className="production-account-grid">
+          {visibleAccounts.map(accountRow => (
+            <button
+              type="button"
+              key={accountRow.id}
+              onClick={() => openAccount(accountRow.id)}
+              className="production-account-card production-account-card-button"
+              aria-haspopup="dialog"
+            >
+              <div className="production-account-top">
+                <span className="production-account-icon"><UserRound size={17}/></span>
+                <div className="production-account-info-col">
+                  <strong className="production-account-name">{accountRow.name}</strong>
+                  <span className="production-account-username">{accountRow.username ? (accountRow.username.startsWith("@") ? accountRow.username : `@${accountRow.username}`) : "Tanpa username"}</span>
+                  <span className="production-account-core">{accountRow.core}{accountRow.subCore ? ` / ${accountRow.subCore}` : ""}</span>
+                </div>
+                <span className="production-state active">Aktif</span>
+              </div>
+              <div className="production-account-progress">
+                <span>Progres produksi</span>
+                <b>{accountRow.progress}%</b>
+              </div>
+              <div className="production-progress-track compact">
+                <i style={{ width: `${accountRow.progress}%` }}/>
+              </div>
+              <div className="production-account-metrics">
+                <div>
+                  <span>{accountRow.productCount} produk · {accountRow.planned.toLocaleString("id-ID")} unit target</span>
+                  <small>{accountRow.doneProducts} selesai · {accountRow.inProgress} proses</small>
+                </div>
+                <span className="production-account-open">Lihat detail <ArrowRight size={13}/></span>
+              </div>
+              {accountRow.productCount === 0 && <span className="production-no-products">Belum ada produk</span>}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="production-empty">
+          <UserRound size={20}/>
+          <strong>{data.accounts.length ? "Akun tidak ditemukan" : "Belum ada akun aktif"}</strong>
+          <span>{data.accounts.length ? "Ubah kata pencarian." : "Tambahkan atau aktifkan akun di halaman Akun untuk memulai produksi."}</span>
+        </div>
+      )}
     </section>
-    <section className="panel production-catalog"><div className="production-list-heading"><div><h2>Core Library</h2><p>Template tersedia untuk ditambahkan secara terpisah ke akun produksi.</p></div><label className="global-search"><Search size={14}/><input value={catalogQuery} onChange={event => setCatalogQuery(event.target.value)} placeholder="Cari katalog?" aria-label="Cari Core Library"/></label></div><div className="production-catalog-grid">{catalog.filter(item => `${item.name} ${item.core ?? ""} ${item.subCore ?? ""}`.toLowerCase().includes(catalogQuery.trim().toLowerCase())).map(item => <article className={`production-catalog-card${item.isArchived ? " is-archived" : ""}`} key={item.id}><div className="production-product-top"><span className="production-product-icon"><Box size={16}/></span><span className={`production-product-state ${item.isArchived ? "state-archived" : "state-done"}`}>{item.isArchived ? "Diarsipkan" : "Tersedia"}</span></div><strong>{item.name}</strong><small>{[item.core, item.subCore].filter(Boolean).join(" / ") || "Tanpa kategori"}</small><p>{item.description || "Tanpa deskripsi"}</p><div className="production-catalog-foot"><span>Target default: <b>{item.defaultTarget?.toLocaleString("id-ID") ?? "Belum diatur"}</b></span><span>{item._count.assignments} penugasan</span></div>{admin && <div className="production-catalog-actions"><button className="btn btn-sm" onClick={() => openTemplateForm("", item)}>Edit template</button>{!item.isArchived && <button className="btn btn-sm" onClick={() => void archiveTemplate(item)}>Arsipkan</button>}</div>}</article>)}{!catalog.length && <div className="production-empty">Katalog masih kosong. Buat template agar dapat digunakan pada akun.</div>}</div></section>
-    <section className="panel production-overview"><div className="production-overview-head"><div><h2 className="panel-title">Progres keseluruhan</h2><p className="panel-sub">Unit selesai dibandingkan dengan seluruh target produk aktif.</p></div><strong>{busy ? "—" : `${data.totals.progress}%`}</strong></div><div className="production-progress-track"><i style={{ width: `${busy ? 0 : data.totals.progress}%` }}/></div><div className="production-overview-foot"><span>{busy ? "Memuat data produksi…" : `${data.totals.completed.toLocaleString("id-ID")} dari ${data.totals.planned.toLocaleString("id-ID")} unit selesai`}</span><span>{data.totals.doneProducts} selesai · {data.totals.inProgress} dalam proses · {data.totals.notStarted} belum dimulai</span></div></section>
+
+    {/* 3. Core Library */}
+    <section className="panel production-catalog">
+      <div className="production-list-heading">
+        <div>
+          <h2>Core Library</h2>
+          <p>Template tersedia untuk ditambahkan secara terpisah ke akun produksi.</p>
+        </div>
+        <div className="production-catalog-header-actions">
+          <label className="global-search">
+            <Search size={14}/>
+            <input value={catalogQuery} onChange={event => setCatalogQuery(event.target.value)} placeholder="Cari katalog…" aria-label="Cari Core Library"/>
+          </label>
+          {admin && (
+            <button className="btn btn-primary btn-sm" onClick={() => openTemplateForm()}>
+              <Plus size={14}/>Tambah Template
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="production-catalog-grid">
+        {catalog.filter(item => `${item.name} ${item.core ?? ""} ${item.subCore ?? ""}`.toLowerCase().includes(catalogQuery.trim().toLowerCase())).map(item => (
+          <article className={`production-catalog-card${item.isArchived ? " is-archived" : ""}`} key={item.id}>
+            <div className="production-product-top">
+              <span className="production-product-icon"><Box size={16}/></span>
+              <span className={`production-product-state ${item.isArchived ? "state-archived" : "state-done"}`}>
+                {item.isArchived ? "Diarsipkan" : "Tersedia"}
+              </span>
+            </div>
+            <strong>{item.name}</strong>
+            <small>{[item.core, item.subCore].filter(Boolean).join(" / ") || "Untuk akun umum"}</small>
+            <p>{item.description || "Template siap digunakan untuk akun produksi."}</p>
+            <div className="production-catalog-foot">
+              <span>{item.defaultTarget ? `${item.defaultTarget.toLocaleString("id-ID")} target default` : `${item._count.assignments} penugasan`}</span>
+              <span className="production-catalog-badge">Tersedia</span>
+            </div>
+            {admin && (
+              <div className="production-catalog-actions">
+                <button className="btn btn-sm" onClick={() => openTemplateForm("", item)}>Edit template</button>
+                {!item.isArchived && <button className="btn btn-sm" onClick={() => void archiveTemplate(item)}>Arsipkan</button>}
+              </div>
+            )}
+          </article>
+        ))}
+        {!catalog.length && <div className="production-empty">Katalog masih kosong. Buat template agar dapat digunakan pada akun.</div>}
+      </div>
+    </section>
+
 
     {portalReady && createPortal(<>
     {accountOpen && <div className="modal-backdrop production-layer account-layer" onMouseDown={event => { if (event.target === event.currentTarget && !productOpen && !templateFormOpen && !pickerOpen) setAccountOpen(false); }}><section role="dialog" aria-modal="true" aria-labelledby="production-account-title" className="modal production-account-modal" onKeyDown={keepFocusInside} onMouseDown={event => event.stopPropagation()}><header className="production-modal-header"><div><span className="production-eyebrow"><UserRound size={14}/>DETAIL AKUN PRODUKSI</span><h2 id="production-account-title" className="modal-title">{account?.name ?? (accountBusy ? "Memuat akun…" : "Akun")}</h2><p className="page-subtitle">{account?.username || "Identifier belum diatur"}{account?.core ? ` · ${account.core}${account.subCore ? ` / ${account.subCore}` : ""}` : ""}{account?.platform ? ` · ${account.platform}` : ""}</p></div><button autoFocus className="btn btn-sm" onClick={() => setAccountOpen(false)} aria-label="Tutup detail akun"><X size={16}/></button></header>
