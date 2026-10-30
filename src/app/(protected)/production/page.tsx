@@ -110,12 +110,23 @@ export default function ProductionDashboardPage() {
     } catch (cause) { setAccountError(cause instanceof Error ? cause.message : "Produk gagal ditambahkan."); }
     finally { setCreating(false); }
   }
-  async function archiveTemplate(item: CatalogItem) {
-    if (!window.confirm(`Arsipkan template ${item.name}? Data produksi di akun tetap tersimpan.`)) return;
-    const response = await fetch(`/api/production/catalog/${item.id}`, { method: "DELETE" }); const result = await response.json();
-    if (!response.ok) { setError(result.error || "Template gagal diarsipkan."); return; }
-    await loadCatalog(); setMessage("Template diarsipkan; data akun tetap tersedia.");
+async function deleteCore(item: CatalogItem) {
+  if (!window.confirm(`Hapus Core "${item.name}" secara permanen?`)) return;
+
+  setError("");
+  const response = await fetch(`/api/production/catalog/${item.id}`, {
+    method: "DELETE",
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    setError(result.error || "Core gagal dihapus.");
+    return;
   }
+
+  await loadCatalog();
+  setMessage("Core berhasil dihapus.");
+}
 
   const accountModalOpen = accountOpen; const productModalOpen = productOpen; const creationModalOpen = templateFormOpen; const pickerModalOpen = pickerOpen;
   useEffect(() => {
