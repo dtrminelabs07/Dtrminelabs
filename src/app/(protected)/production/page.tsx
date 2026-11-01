@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Activity, ArrowRight, Archive, Box, Calendar, CheckCircle2, ChevronDown, Clock3, Layers, MessageSquareText, PackagePlus, Plus, Search, Send, UserRound, X } from "lucide-react";
+import { Activity, ArrowRight, Archive, Box, Calendar, CheckCircle2, ChevronDown, Clock3, Layers, MessageSquareText, PackagePlus, Plus, RotateCcw, Search, Send, Trash2, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { getProductionProgress, getProductionStatus, getProductionStatusLabel } from "@/lib/production-status";
 
@@ -110,11 +110,41 @@ export default function ProductionDashboardPage() {
     } catch (cause) { setAccountError(cause instanceof Error ? cause.message : "Produk gagal ditambahkan."); }
     finally { setCreating(false); }
   }
-  async function archiveTemplate(item: CatalogItem) {
-    if (!window.confirm(`Arsipkan template ${item.name}? Data produksi di akun tetap tersimpan.`)) return;
-    const response = await fetch(`/api/production/catalog/${item.id}`, { method: "DELETE" }); const result = await response.json();
-    if (!response.ok) { setError(result.error || "Template gagal diarsipkan."); return; }
-    await loadCatalog(); setMessage("Template diarsipkan; data akun tetap tersedia.");
+  async function deleteOrArchiveTemplate(item: CatalogItem) {
+    const isUnused = item._count.assignments === 0;
+    const confirmText = isUnused
+      ? `Hapus template “${item.name}” secara permanen? Template ini belum digunakan oleh akun manapun dan akan dihapus dari sistem.`
+      : item.isArchived
+      ? `Template “${item.name}” masih digunakan oleh ${item._count.assignments} produk akun produksi. Lanjutkan percobaan hapus?`
+      : `Arsipkan template “${item.name}”? Template tidak akan muncul untuk penugasan produk baru, tetapi ${item._count.assignments} produk yang sedang berjalan pada akun tetap tersimpan.`;
+    if (!window.confirm(confirmText)) return;
+    setError(""); setMessage("");
+    try {
+      const response = await fetch(`/api/production/catalog/${item.id}`, { method: "DELETE" });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || "Gagal memproses template.");
+      setMessage(result?.message || (isUnused ? "Template berhasil dihapus." : "Template berhasil diarsipkan."));
+      await Promise.all([loadCatalog(accountOpen ? accountId : undefined), load()]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Gagal memproses template.");
+    }
+  }
+  async function restoreTemplate(item: CatalogItem) {
+    if (!window.confirm(`Aktifkan kembali template “${item.name}”? Template akan kembali tersedia untuk penugasan akun produksi.`)) return;
+    setError(""); setMessage("");
+    try {
+      const response = await fetch(`/api/production/catalog/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isArchived: false })
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.error || "Template gagal dipulihkan.");
+      setMessage(`Template “${item.name}” berhasil dipulihkan dan siap digunakan.`);
+      await Promise.all([loadCatalog(accountOpen ? accountId : undefined), load()]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Template gagal dipulihkan.");
+    }
   }
 
   const accountModalOpen = accountOpen; const productModalOpen = productOpen; const creationModalOpen = templateFormOpen; const pickerModalOpen = pickerOpen;
@@ -366,12 +396,29 @@ export default function ProductionDashboardPage() {
             <p>{item.description || "Template siap digunakan untuk akun produksi."}</p>
             <div className="production-catalog-foot">
               <span>{item.defaultTarget ? `${item.defaultTarget.toLocaleString("id-ID")} target default` : `${item._count.assignments} penugasan`}</span>
-              <span className="production-catalog-badge">Tersedia</span>
+              <span className="production-catalog-badge">{item.isArchived ? "Diarsipkan" : "Tersedia"}</span>
             </div>
             {admin && (
               <div className="production-catalog-actions">
-                <button className="btn btn-sm" onClick={() => openTemplateForm("", item)}>Edit template</button>
-                {!item.isArchived && <button className="btn btn-sm" onClick={() => void archiveTemplate(item)}>Arsipkan</button>}
+                <button className="btn btn-sm" onClick={() => openTemplateForm("", item)}>Edit</button>
+                {item.isArchived ? (
+                  <>
+                    <button className="btn btn-sm" onClick={() => void restoreTemplate(item)} title="Pulihkan template">
+                      <RotateCcw size={13}/>Pulihkan
+                    </button>
+                    <button className="btn btn-sm danger-action" onClick={() => void deleteOrArchiveTemplate(item)} title="Hapus template">
+                      <Trash2 size={13}/>Hapus
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className={`btn btn-sm ${item._count.assignments === 0 ? "danger-action" : ""}`}
+                    onClick={() => void deleteOrArchiveTemplate(item)}
+                    title={item._count.assignments === 0 ? "Hapus template permanen" : "Arsipkan template"}
+                  >
+                    {item._count.assignments === 0 ? <><Trash2 size={13}/>Hapus</> : "Arsipkan"}
+                  </button>
+                )}
               </div>
             )}
           </article>

@@ -125,7 +125,7 @@ export default function AccountsPage() {
   async function deleteAccount(account: Account) {
     if (deleteInFlight.current.has(account.id)) return;
     if (!admin) return setToast("Akses ditolak: hanya admin yang dapat menghapus akun.");
-    if (!window.confirm(`Hapus akun “${account.name}” secara permanen? Tindakan ini tidak dapat dibatalkan. Jika akun memiliki status tracker, catatan, komentar, atau produk produksi, penghapusan akan ditolak agar data tersebut tetap aman.`)) return;
+    if (!window.confirm(`Hapus akun “${account.name}” secara permanen? Tindakan ini tidak dapat dibatalkan.\n\nSemua data upload tracker, catatan, komentar, dan produk produksi pada akun ini akan ikut dihapus. Riwayat aktivitas pada menu History tetap tersimpan sebagai arsip.`)) return;
     deleteInFlight.current.add(account.id);
     setDeleteBusyId(account.id);
     try {
@@ -135,7 +135,7 @@ export default function AccountsPage() {
       setRows(current => current.filter(row => row.id !== account.id));
       setAllRows(current => current.filter(row => row.id !== account.id));
       if (details?.id === account.id) setDetails(null);
-      setToast("Akun berhasil dihapus secara permanen.");
+      setToast(result?.message || "Akun berhasil dihapus secara permanen.");
       void Promise.allSettled([load(), loadAll()]);
     } catch (error) {
       setToast(error instanceof Error ? error.message : "Akun gagal dihapus.");
