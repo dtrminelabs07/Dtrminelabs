@@ -110,40 +110,78 @@ export default function ProductionDashboardPage() {
     } catch (cause) { setAccountError(cause instanceof Error ? cause.message : "Produk gagal ditambahkan."); }
     finally { setCreating(false); }
   }
-  async function deleteOrArchiveTemplate(item: CatalogItem) {
+  async function deleteCore(item: CatalogItem) {
     const isUnused = item._count.assignments === 0;
     const confirmText = isUnused
-      ? `Hapus template “${item.name}” secara permanen? Template ini belum digunakan oleh akun manapun dan akan dihapus dari sistem.`
+      ? `Hapus Core "${item.name}" secara permanen? Template ini belum digunakan oleh akun manapun.`
       : item.isArchived
-      ? `Template “${item.name}” masih digunakan oleh ${item._count.assignments} produk akun produksi. Lanjutkan percobaan hapus?`
-      : `Arsipkan template “${item.name}”? Template tidak akan muncul untuk penugasan produk baru, tetapi ${item._count.assignments} produk yang sedang berjalan pada akun tetap tersimpan.`;
+      ? `Core "${item.name}" masih digunakan oleh ${item._count.assignments} produk akun produksi. Lanjutkan percobaan hapus?`
+      : `Core "${item.name}" masih digunakan oleh ${item._count.assignments} produk akun produksi.\n\nApakah Anda ingin mengarsipkannya agar data produksi yang berjalan tetap aman?`;
+
     if (!window.confirm(confirmText)) return;
-    setError(""); setMessage("");
+
+    setError("");
+    setMessage("");
     try {
-      const response = await fetch(`/api/production/catalog/${item.id}`, { method: "DELETE" });
+      const url = (!isUnused && !item.isArchived)
+        ? `/api/production/catalog/${item.id}?action=archive`
+        : `/api/production/catalog/${item.id}?action=delete`;
+
+      const response = await fetch(url, { method: "DELETE" });
       const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.error || "Gagal memproses template.");
-      setMessage(result?.message || (isUnused ? "Template berhasil dihapus." : "Template berhasil diarsipkan."));
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Core gagal dihapus.");
+      }
+
       await Promise.all([loadCatalog(accountOpen ? accountId : undefined), load()]);
+      setMessage(result?.message || (result?.archived ? "Core berhasil diarsipkan." : "Core berhasil dihapus."));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Gagal memproses template.");
+      setError(cause instanceof Error ? cause.message : "Core gagal dihapus.");
     }
   }
-  async function restoreTemplate(item: CatalogItem) {
-    if (!window.confirm(`Aktifkan kembali template “${item.name}”? Template akan kembali tersedia untuk penugasan akun produksi.`)) return;
-    setError(""); setMessage("");
+
+  async function archiveCore(item: CatalogItem) {
+    if (!window.confirm(`Arsipkan Core "${item.name}"? Template tidak akan muncul untuk penugasan baru, namun ${item._count.assignments} produk yang sedang berjalan pada akun tetap aman.`)) return;
+
+    setError("");
+    setMessage("");
+    try {
+      const response = await fetch(`/api/production/catalog/${item.id}?action=archive`, { method: "DELETE" });
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Core gagal diarsipkan.");
+      }
+
+      await Promise.all([loadCatalog(accountOpen ? accountId : undefined), load()]);
+      setMessage(result?.message || "Core berhasil diarsipkan; data akun tetap tersedia.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Core gagal diarsipkan.");
+    }
+  }
+
+  async function restoreCore(item: CatalogItem) {
+    if (!window.confirm(`Aktifkan kembali Core "${item.name}"? Template akan kembali tersedia untuk penugasan akun produksi.`)) return;
+
+    setError("");
+    setMessage("");
     try {
       const response = await fetch(`/api/production/catalog/${item.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isArchived: false })
+        body: JSON.stringify({ isArchived: false }),
       });
       const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.error || "Template gagal dipulihkan.");
-      setMessage(`Template “${item.name}” berhasil dipulihkan dan siap digunakan.`);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "Core gagal dipulihkan.");
+      }
+
       await Promise.all([loadCatalog(accountOpen ? accountId : undefined), load()]);
+      setMessage(result?.message || `Core "${item.name}" berhasil dipulihkan.`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Template gagal dipulihkan.");
+      setError(cause instanceof Error ? cause.message : "Core gagal dipulihkan.");
     }
   }
 
@@ -403,21 +441,28 @@ export default function ProductionDashboardPage() {
                 <button className="btn btn-sm" onClick={() => openTemplateForm("", item)}>Edit</button>
                 {item.isArchived ? (
                   <>
-                    <button className="btn btn-sm" onClick={() => void restoreTemplate(item)} title="Pulihkan template">
+                    <button className="btn btn-sm" onClick={() => void restoreCore(item)} title="Pulihkan Core">
                       <RotateCcw size={13}/>Pulihkan
                     </button>
-                    <button className="btn btn-sm danger-action" onClick={() => void deleteOrArchiveTemplate(item)} title="Hapus template">
+                    <button className="btn btn-sm danger-action" onClick={() => void deleteCore(item)} title="Hapus Core permanen">
                       <Trash2 size={13}/>Hapus
                     </button>
                   </>
                 ) : (
-                  <button
-                    className={`btn btn-sm ${item._count.assignments === 0 ? "danger-action" : ""}`}
-                    onClick={() => void deleteOrArchiveTemplate(item)}
-                    title={item._count.assignments === 0 ? "Hapus template permanen" : "Arsipkan template"}
-                  >
-                    {item._count.assignments === 0 ? <><Trash2 size={13}/>Hapus</> : "Arsipkan"}
-                  </button>
+                  <>
+                    {item._count.assignments > 0 && (
+                      <button className="btn btn-sm" onClick={() => void archiveCore(item)} title="Arsipkan Core">
+                        Arsipkan
+                      </button>
+                    )}
+                    <button
+                      className={`btn btn-sm ${item._count.assignments === 0 ? "danger-action" : ""}`}
+                      onClick={() => void deleteCore(item)}
+                      title={item._count.assignments === 0 ? "Hapus Core permanen" : "Hapus atau arsipkan Core"}
+                    >
+                      {item._count.assignments === 0 ? <><Trash2 size={13}/>Hapus</> : "Hapus"}
+                    </button>
+                  </>
                 )}
               </div>
             )}
