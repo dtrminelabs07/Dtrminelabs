@@ -444,23 +444,27 @@ export default function ProductionDashboardPage() {
                     <button className="btn btn-sm" onClick={() => void restoreCore(item)} title="Pulihkan Core">
                       <RotateCcw size={13}/>Pulihkan
                     </button>
-                    <button className="btn btn-sm danger-action" onClick={() => void deleteCore(item)} title="Hapus Core permanen">
+                    <button
+                      className={`btn btn-sm danger-action ${item._count.assignments > 0 ? "disabled" : ""}`}
+                      onClick={() => void deleteCore(item)}
+                      title={item._count.assignments === 0 ? "Hapus Core permanen" : "Template masih digunakan. Tidak dapat dihapus."}
+                      disabled={item._count.assignments > 0}
+                    >
                       <Trash2 size={13}/>Hapus
                     </button>
                   </>
                 ) : (
                   <>
-                    {item._count.assignments > 0 && (
-                      <button className="btn btn-sm" onClick={() => void archiveCore(item)} title="Arsipkan Core">
-                        Arsipkan
-                      </button>
-                    )}
+                    <button className="btn btn-sm" onClick={() => void archiveCore(item)} title="Arsipkan Core">
+                      Arsipkan
+                    </button>
                     <button
                       className={`btn btn-sm ${item._count.assignments === 0 ? "danger-action" : ""}`}
                       onClick={() => void deleteCore(item)}
-                      title={item._count.assignments === 0 ? "Hapus Core permanen" : "Hapus atau arsipkan Core"}
+                      title={item._count.assignments === 0 ? "Hapus Core permanen" : "Template masih digunakan. Arsipkan terlebih dahulu."}
+                      disabled={item._count.assignments > 0}
                     >
-                      {item._count.assignments === 0 ? <><Trash2 size={13}/>Hapus</> : "Hapus"}
+                      {item._count.assignments === 0 ? <><Trash2 size={13}/>Hapus</> : "Tidak dapat dihapus"}
                     </button>
                   </>
                 )}
